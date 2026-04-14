@@ -363,14 +363,14 @@
         }
 
         /* === Lookup Modal === */
-        #lookupModal .modal-content { max-width: 650px; padding: 24px; }
+        #lookupModal .modal-content { width: 95vw; max-width: 1600px; height: 85vh; padding: 24px; display: flex; flex-direction: column; }
         .lookup-table-wrap {
-            max-height: 400px; overflow-y: auto;
-            background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; margin-bottom: 16px;
+            flex: 1; overflow-y: auto; overflow-x: auto;
+            background: rgba(13, 20, 36, 0.6); border: 1px solid var(--border-color); border-radius: 8px; margin-bottom: 16px;
         }
         .lookup-table { width: 100%; border-collapse: collapse; text-align: left; }
-        .lookup-table th { background: rgba(0, 240, 255, 0.1); color: var(--accent-cyan); position: sticky; top:0; padding: 10px; font-size: 0.8rem; }
-        .lookup-table td { padding: 8px 10px; border-bottom: 1px solid rgba(255,255,255,0.05); cursor: pointer; transition: 0.2s; font-family: var(--font-mono); font-size: 0.85rem;}
+        .lookup-table th { background: rgba(13, 20, 36, 0.95); backdrop-filter: blur(8px); color: var(--text-muted); position: sticky; top:0; padding: 12px 16px; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px; z-index: 10; border-bottom: 1px solid var(--border-color); }
+        .lookup-table td { padding: 8px 16px; border-bottom: 1px solid rgba(255,255,255,0.03); cursor: pointer; transition: 0.2s; font-family: 'JetBrains Mono', monospace; font-size: 0.85rem;}
         .lookup-table tr:hover td { background: rgba(0, 255, 157, 0.15); color: var(--accent-green); }
         .lookup-search { width: 100%; padding: 10px; margin-bottom: 12px; background: rgba(0,0,0,0.5); border: 1px solid var(--accent-cyan); color: white; border-radius: 6px; outline: none; }
 
@@ -927,18 +927,29 @@ const sysdig = spawn('sysdig', ['-j']); // JSON çıktısı verir
     </div>
 
     <!-- LOOKUP MODAL -->
-    <div class="modal" id="lookupModal">
+        <div class="modal" id="lookupModal">
         <div class="modal-content">
             <button class="close-btn" onclick="closeLookupModal()">×</button>
             <h2 id="lookup-title"><span><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:8px"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg></span> Select Resource</h2>
             <input type="text" class="lookup-search" id="lookup-search" placeholder="Listeyi filtrele..." onkeyup="filterLookupTable()">
-            <div class="lookup-table-wrap">
+            <div class="lookup-table-wrap" id="lookup-table-wrap">
                 <table class="lookup-table" id="lookup-table">
                     <thead id="lookup-thead"></thead>
                     <tbody id="lookup-tbody"></tbody>
                 </table>
             </div>
             <p style="font-size: 0.8rem; color: var(--text-muted); text-align:right; margin:0;" id="lookup-count">0 satır yüklendi.</p>
+        </div>
+    </div>
+
+    <!-- EVENT DETAIL MODAL -->
+    <div class="modal" id="eventDetailModal">
+        <div class="modal-content" style="max-width: 1000px; width: 90vw; height: auto; max-height: 90vh;">
+            <button class="close-btn" onclick="closeEventDetailModal()">×</button>
+            <h2 id="event-detail-title" style="margin-bottom:24px;"><span><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:8px"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg></span> Detailed Event Info</h2>
+            <div id="event-detail-content" style="color:var(--text-main); font-size: 0.9rem;">
+                <!-- Filled via JS -->
+            </div>
         </div>
     </div>
 
@@ -1048,6 +1059,22 @@ const sysdig = spawn('sysdig', ['-j']); // JSON çıktısı verir
                 document.getElementById('conn-status').innerHTML = '<span class="dot connected" id="conn-indicator"></span> Socket: Connected';
                 // Request version info when connected
                 pollVersions();
+                
+                // Fetch process tree quietly to populate treeData cache for event details and modals
+                setTimeout(() => {
+                    if (window.ws.readyState === WebSocket.OPEN) {
+                        window.ws.send(JSON.stringify({ command: 'GET_PROCESS_TREE' }));
+                    }
+                }, 1000);
+                
+                // Auto refresh treeData every 10 secs if tracing is running
+                if (!treeAutoRefreshId) {
+                    treeAutoRefreshId = setInterval(() => {
+                        if (isCapturing && window.ws && window.ws.readyState === WebSocket.OPEN) {
+                            window.ws.send(JSON.stringify({ command: 'GET_PROCESS_TREE' }));
+                        }
+                    }, 10000);
+                }
             };
             
             window.ws.onclose = () => {
@@ -1133,6 +1160,12 @@ const sysdig = spawn('sysdig', ['-j']); // JSON çıktısı verir
                 <td class="mono ${String(eventObj.res).includes('ENOENT') ? 'dir-in' : ''}">${eventObj.res || '0'}</td>
             `;
 
+            // Make row clickable for advanced Event Details
+            const encodedEv = encodeURIComponent(JSON.stringify(eventObj));
+            row.style.cursor = "pointer";
+            row.onclick = () => showEventDetail(encodedEv);
+            row.title = "Click to view full event & process details";
+
             // Prepend new row
             tbody.insertBefore(row, tbody.firstChild);
 
@@ -1187,6 +1220,19 @@ const sysdig = spawn('sysdig', ['-j']); // JSON çıktısı verir
             
             document.getElementById('lookupModal').classList.add('active');
             document.getElementById('lookup-title').innerHTML = `<span><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg></span> Fetching ${lookupType}...`;
+            
+            // Re-use current treeData if available for processes
+            if (lookupType === 'PROCESSES') {
+                if (window.ws && window.ws.readyState === WebSocket.OPEN) {
+                    window.ws.send(JSON.stringify({ command: 'GET_PROCESS_TREE' }));
+                } else if (treeData.length > 0) {
+                    renderLookupProcessTree();
+                } else {
+                    document.getElementById('lookup-tbody').innerHTML = `<tr><td colspan="4" style="text-align:center; padding: 24px;">Bağlantı algılanamadı, veriler boş...</td></tr>`;
+                }
+                return;
+            }
+
             document.getElementById('lookup-tbody').innerHTML = `<tr><td colspan="4" style="text-align:center; padding: 24px;">Arka plandan veriler çekiliyor...</td></tr>`;
             document.getElementById('lookup-count').innerText = "0 satır";
 
@@ -1248,22 +1294,36 @@ const sysdig = spawn('sysdig', ['-j']); // JSON çıktısı verir
 
         /* === Lookup Process Tree Logic === */
         let lookupTreeExpanded = {};
-        let lookupTreeData = [];
 
         function renderLookupProcessTree(rawData = null) {
-            if (rawData) { lookupTreeData = rawData; }
+            // lookup modal process tree directly uses the main treeData variable for full detail visualization
+            if (rawData) { treeData = rawData; } // update if passed
             const searchTerm = document.getElementById('lookup-search').value.trim().toLowerCase();
 
-            const tableHead = document.getElementById('lookup-thead');
-            const tableBody = document.getElementById('lookup-tbody');
+            const tableWrap = document.getElementById('lookup-table-wrap');
+            // We swap out the standard table inside lookup with our pro div structure temporarily
+            tableWrap.innerHTML = `
+                <div class="tree-header">
+                    <span class="col-tree">PROCESS (COMMAND)</span>
+                    <span class="col-pid">PID</span>
+                    <span class="col-ppid">PPID</span>
+                    <span class="col-user">USER</span>
+                    <span class="col-cpu">%CPU</span>
+                    <span class="col-mem">%MEM</span>
+                    <span class="col-stat">STAT</span>
+                    <span class="col-tty">TTY</span>
+                    <span class="col-start">START</span>
+                </div>
+                <div id="lookup-tree-body"></div>
+            `;
             
-            tableHead.innerHTML = "<tr><th>PROCESS TREE</th><th width='70'>PID</th><th width='70'>PPID</th><th width='90'>USER</th></tr>";
+            const treeBody = document.getElementById('lookup-tree-body');
 
-            let filtered = lookupTreeData;
+            let filtered = treeData;
             if (searchTerm) {
                 const matchedPids = new Set();
                 filtered.forEach(p => {
-                    if (p.name.toLowerCase().includes(searchTerm) ||
+                    if (p.comm.toLowerCase().includes(searchTerm) ||
                         p.pid.includes(searchTerm) ||
                         p.user.toLowerCase().includes(searchTerm)) {
                         matchedPids.add(p.pid);
@@ -1275,7 +1335,7 @@ const sysdig = spawn('sysdig', ['-j']); // JSON çıktısı verir
                         }
                     }
                 });
-                filtered = lookupTreeData.filter(p => matchedPids.has(p.pid));
+                filtered = treeData.filter(p => matchedPids.has(p.pid));
             }
 
             const childrenMap = {};
@@ -1289,9 +1349,14 @@ const sysdig = spawn('sysdig', ['-j']); // JSON çıktısı verir
             const roots = filtered.filter(p => !pidSet.has(p.ppid) || p.ppid === '0');
             roots.sort((a, b) => parseInt(a.pid) - parseInt(b.pid));
 
-            let rows = "";
+            if (roots.length === 0) {
+                treeBody.innerHTML = '<div style="padding: 24px; text-align:center; color: var(--text-muted)">Eşleşen süreç bulunamadı. Bağlantı var mı kontrol edin.</div>';
+                return;
+            }
+
+            const fragment = document.createDocumentFragment();
             
-            function buildHtml(proc, depth, ancestorIsLast, isLast) {
+            function buildLookupHtml(proc, depth, ancestorIsLast, container, isLast) {
                 const children = childrenMap[proc.pid] || [];
                 children.sort((a, b) => parseInt(a.pid) - parseInt(b.pid));
                 const hasChildren = children.length > 0;
@@ -1317,29 +1382,54 @@ const sysdig = spawn('sysdig', ['-j']); // JSON çıktısı verir
                     toggleHtml = `<span class="tree-toggle leaf">·</span>`;
                 }
                 
-                const valToSelect = currentLookupDataKey === 'pid' ? proc.pid : proc.name;
+                let nameClass = 'tree-proc-name';
+                if (proc.user === 'root' && proc.pid === '1') nameClass += ' root-proc';
+                if (proc.pid === '2' || proc.comm.startsWith('k')) nameClass += ' kernel-proc';
 
-                rows += `<tr onclick="selectLookupRow('${escapeHtml(valToSelect)}')">`;
-                rows += `<td><div class="tree-indent">${indentHtml}</div>${toggleHtml} <span style="font-weight:600">${escapeHtml(proc.name)}</span></td>`;
-                rows += `<td>${proc.pid}</td>`;
-                rows += `<td>${proc.ppid}</td>`;
-                rows += `<td>${escapeHtml(proc.user)}</td>`;
-                rows += `</tr>`;
+                const cpuVal = parseFloat(proc.cpu) || 0;
+                const memVal = parseFloat(proc.mem) || 0;
+                const cpuClass = cpuVal >= 50 ? 'usage-high' : (cpuVal >= 10 ? 'usage-mid' : 'usage-low');
+                const memClass = memVal >= 50 ? 'usage-high' : (memVal >= 10 ? 'usage-mid' : 'usage-low');
+                const statChar = proc.stat ? proc.stat.charAt(0) : '?';
+                const statClass = 'stat-badge stat-' + statChar;
+
+                const valToSelect = currentLookupDataKey === 'pid' ? proc.pid : proc.comm;
+
+                const node = document.createElement('div');
+                node.className = 'tree-node';
+                node.style.cursor = 'pointer';
+                node.onclick = () => selectLookupRow(valToSelect);
+                
+                node.innerHTML = `
+                    <div class="tree-cell col-tree">
+                        <div class="tree-indent">${indentHtml}</div>
+                        ${toggleHtml} <span class="${nameClass}">${escapeHtml(proc.comm)}</span>
+                    </div>
+                    <div class="tree-cell col-pid" style="color:var(--text-muted)">${proc.pid}</div>
+                    <div class="tree-cell col-ppid" style="color:var(--text-muted)">${proc.ppid}</div>
+                    <div class="tree-cell col-user">${escapeHtml(proc.user)}</div>
+                    <div class="tree-cell col-cpu ${cpuClass}">${proc.cpu}%</div>
+                    <div class="tree-cell col-mem ${memClass}">${proc.mem}%</div>
+                    <div class="tree-cell col-stat"><span class="${statClass}">${proc.stat}</span></div>
+                    <div class="tree-cell col-tty" style="color:var(--text-muted)">${proc.tty === '?' ? '—' : proc.tty}</div>
+                    <div class="tree-cell col-start" style="color:var(--text-muted)">${proc.start}</div>
+                `;
+                container.appendChild(node);
 
                 if (hasChildren && expanded) {
                     const newAncestors = [...ancestorIsLast, isLast];
                     children.forEach((child, idx) => {
-                        buildHtml(child, depth + 1, newAncestors, idx === children.length - 1);
+                        buildLookupHtml(child, depth + 1, newAncestors, container, idx === children.length - 1);
                     });
                 }
             }
 
             roots.forEach((proc, idx) => {
-                buildHtml(proc, 0, [], idx === roots.length - 1);
+                buildLookupHtml(proc, 0, [], fragment, idx === roots.length - 1);
             });
 
-            tableBody.innerHTML = rows;
-            document.getElementById('lookup-title').innerHTML = `<span><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg></span> Select PROCESS`;
+            treeBody.appendChild(fragment);
+            document.getElementById('lookup-title').innerHTML = `<span><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg></span> Select PROCESS (Click row to select)`;
             document.getElementById('lookup-count').innerText = `${filtered.length} süreç gösteriliyor.`;
         }
 
@@ -1347,6 +1437,66 @@ const sysdig = spawn('sysdig', ['-j']); // JSON çıktısı verir
             event.stopPropagation();
             lookupTreeExpanded[pid] = !lookupTreeExpanded[pid];
             renderLookupProcessTree();
+        }
+
+        /* === Detailed Event Modal === */
+        function showEventDetail(eventJsonEncoded) {
+            const ev = JSON.parse(decodeURIComponent(eventJsonEncoded));
+            document.getElementById('eventDetailModal').classList.add('active');
+            
+            let procInfo = treeData.find(p => p.pid === String(ev.proc_pid));
+            let parentInfo = treeData.find(p => p.pid === String(ev.proc_ppid));
+
+            let html = \`
+                <div style="display:flex; gap: 20px; margin-bottom: 20px;">
+                    <div style="flex:1; background:rgba(0,255,157,0.05); border:1px solid rgba(0,255,157,0.2); padding:20px; border-radius:8px;">
+                        <h4 style="color:var(--accent-green); margin:0 0 16px 0; display:flex; align-items:center; gap:8px;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg> System Event Data</h4>
+                        <div style="display:grid; grid-template-columns: 130px 1fr; gap: 12px; font-size: 0.95rem;">
+                            <span style="color:var(--text-muted)">Syscall:</span> <strong style="color:var(--text-main); font-size:1.1rem">${ev.evt_type}</strong>
+                            <span style="color:var(--text-muted)">Direction:</span> <strong>\${ev.evt_dir === '>' ? '<span style="color:var(--accent-cyan)">Input (> )</span>' : '<span style="color:var(--accent-green)">Output (< )</span>'}</strong>
+                            <span style="color:var(--text-muted)">Result:</span> <strong class="mono" style="\${String(ev.res).includes('ENOENT') ? 'color:var(--accent-red)' : 'color:var(--accent-green)'}">\${ev.res}</strong>
+                            <span style="color:var(--text-muted)">Resource/Target:</span> <span class="mono" style="word-break:break-all; color:var(--accent-cyan)">\${ev.fd_name || '-'}</span>
+                            <span style="color:var(--text-muted)">Arguments:</span> <div class="mono" style="background:rgba(0,0,0,0.4); padding:12px; border-radius:6px; max-height:120px; overflow-y:auto; border:1px solid rgba(255,255,255,0.05);">\${ev.evt_args || '-'}</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="display:flex; gap: 20px;">
+                    <div style="flex:1; background:rgba(0,240,255,0.05); border:1px solid rgba(0,240,255,0.2); padding:20px; border-radius:8px;">
+                        <h4 style="color:var(--accent-cyan); margin:0 0 16px 0; display:flex; align-items:center; gap:8px;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line></svg> Process Info (PID: \${ev.proc_pid})</h4>
+                        <div style="display:grid; grid-template-columns: 100px 1fr; gap: 10px; font-size: 0.9rem;">
+                            <span style="color:var(--text-muted)">Exec Name:</span> <strong style="color:var(--text-main); font-size:1.05rem;">\${ev.proc_name}</strong>
+                            <span style="color:var(--text-muted)">User:</span> <strong>\${ev.user_name}</strong>
+                            \${procInfo ? \`
+                            <span style="color:var(--text-muted)">Status:</span> <strong><span class="stat-badge stat-\${procInfo.stat.charAt(0)}">\${procInfo.stat}</span></strong>
+                            <span style="color:var(--text-muted)">Usage:</span> <strong><span style="color:var(--accent-cyan)">CPU:</span> \${procInfo.cpu}%  /  <span style="color:var(--accent-cyan)">MEM:</span> \${procInfo.mem}%</strong>
+                            <span style="color:var(--text-muted)">Start Time:</span> <strong>\${procInfo.start}</strong>
+                            <span style="color:var(--text-muted)">Time spent:</span> <strong>\${procInfo.time}</strong>
+                            <span style="color:var(--text-muted)">Cmdline:</span> <span class="mono" style="background:rgba(0,0,0,0.4); border:1px solid rgba(255,255,255,0.05); padding:10px; border-radius:6px; word-break:break-all;">\${procInfo.cmdline}</span>
+                            \` : \`<span style="grid-column: 1/-1; color:var(--accent-orange); font-style:italic; font-size:0.85rem; margin-top:8px; padding:8px; background:rgba(255,176,58,0.1); border-radius:4px;">Arka planda süreç metadatası yok (Ölü bir süreç veya henüz tarama bitmedi). Event bilgisiyle yetinildi.</span>\`}
+                        </div>
+                    </div>
+
+                    <div style="flex:1; background:rgba(255,176,58,0.05); border:1px solid rgba(255,176,58,0.2); padding:20px; border-radius:8px;">
+                        <h4 style="color:var(--accent-orange); margin:0 0 16px 0; display:flex; align-items:center; gap:8px;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"></path></svg> Parent Info (PPID: \${ev.proc_ppid})</h4>
+                        <div style="display:grid; grid-template-columns: 100px 1fr; gap: 10px; font-size: 0.9rem;">
+                            \${parentInfo ? \`
+                            <span style="color:var(--text-muted)">Exec Name:</span> <strong style="color:var(--text-main); font-size:1.05rem;">\${parentInfo.comm}</strong>
+                            <span style="color:var(--text-muted)">User:</span> <strong>\${parentInfo.user}</strong>
+                            <span style="color:var(--text-muted)">Status:</span> <strong><span class="stat-badge stat-\${parentInfo.stat.charAt(0)}">\${parentInfo.stat}</span></strong>
+                            <span style="color:var(--text-muted)">Usage:</span> <strong><span style="color:var(--accent-orange)">CPU:</span> \${parentInfo.cpu}%  /  <span style="color:var(--accent-orange)">MEM:</span> \${parentInfo.mem}%</strong>
+                            <span style="color:var(--text-muted)">Start Time:</span> <strong>\${parentInfo.start}</strong>
+                            <span style="color:var(--text-muted)">Cmdline:</span> <span class="mono" style="background:rgba(0,0,0,0.4); border:1px solid rgba(255,255,255,0.05); padding:10px; border-radius:6px; word-break:break-all;">\${parentInfo.cmdline}</span>
+                            \` : \`<span style="grid-column: 1/-1; color:var(--text-muted); font-style:italic;">Ağaçta parent süreç yakalanamadı (\${ev.proc_ppid}).</span>\`}
+                        </div>
+                    </div>
+                </div>
+            \`;
+            document.getElementById('event-detail-content').innerHTML = html;
+        }
+
+        function closeEventDetailModal() {
+            document.getElementById('eventDetailModal').classList.remove('active');
         }
 
         /* === Tab Switching === */
