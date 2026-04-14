@@ -111,6 +111,51 @@ wss.on('connection', (ws) => {
                     sysdigProcess = null;
                 }
             }
+            else if (req.command === 'GET_PROCESSES') {
+                exec("ps -eo pid,comm,user --no-headers", (err, stdout) => {
+                    const list = [];
+                    if(stdout) {
+                        stdout.split('\n').filter(l => l.trim()).forEach(line => {
+                            const [pid, ...rest] = line.trim().split(/\s+/);
+                            const user = rest.pop();
+                            const name = rest.join(' ');
+                            if(pid) list.push({ pid, name, user });
+                        });
+                    }
+                    ws.send(JSON.stringify({ lookup_type: 'PROCESSES', data: list }));
+                });
+            }
+            else if (req.command === 'GET_PORTS') {
+                exec("ss -lntu", (err, stdout) => {
+                    const list = [];
+                    if(stdout) {
+                        const lines = stdout.split('\n');
+                        lines.shift(); // remove header
+                        lines.filter(l => l.trim()).forEach(line => {
+                            const parts = line.trim().split(/\s+/);
+                            const addr = parts[4] || '';
+                            const portMatch = addr.match(/:([0-9]+)$/);
+                            if(portMatch) list.push({ protocol: parts[0], address: addr, port: portMatch[1] });
+                        });
+                    }
+                    // Filter uniques by port
+                    const uniquePorts = Array.from(new Set(list.map(i => i.port)))
+                         .map(p => list.find(l => l.port === p));
+                    ws.send(JSON.stringify({ lookup_type: 'PORTS', data: uniquePorts }));
+                });
+            }
+            else if (req.command === 'GET_USERS') {
+                exec("getent passwd", (err, stdout) => {
+                    const list = [];
+                    if(stdout) {
+                        stdout.split('\n').filter(l => l.trim()).forEach(line => {
+                            const parts = line.split(':');
+                            if(parts.length > 2) list.push({ user: parts[0], uid: parts[2] });
+                        });
+                    }
+                    ws.send(JSON.stringify({ lookup_type: 'USERS', data: list }));
+                });
+            }
         } catch(e) {
             console.error("Error processing message:", e);
         }

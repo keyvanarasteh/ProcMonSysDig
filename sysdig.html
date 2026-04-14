@@ -362,6 +362,26 @@
             to { opacity: 1; transform: translateY(0); }
         }
 
+        /* === Lookup Modal === */
+        #lookupModal .modal-content { max-width: 650px; padding: 24px; }
+        .lookup-table-wrap {
+            max-height: 400px; overflow-y: auto;
+            background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; margin-bottom: 16px;
+        }
+        .lookup-table { width: 100%; border-collapse: collapse; text-align: left; }
+        .lookup-table th { background: rgba(0, 240, 255, 0.1); color: var(--accent-cyan); position: sticky; top:0; padding: 10px; font-size: 0.8rem; }
+        .lookup-table td { padding: 8px 10px; border-bottom: 1px solid rgba(255,255,255,0.05); cursor: pointer; transition: 0.2s; font-family: var(--font-mono); font-size: 0.85rem;}
+        .lookup-table tr:hover td { background: rgba(0, 255, 157, 0.15); color: var(--accent-green); }
+        .lookup-search { width: 100%; padding: 10px; margin-bottom: 12px; background: rgba(0,0,0,0.5); border: 1px solid var(--accent-cyan); color: white; border-radius: 6px; outline: none; }
+
+        .btn-lookup {
+            position: absolute; right: 4px; top: 18px;
+            background: rgba(0, 240, 255, 0.1); border: 1px solid var(--accent-cyan); color: var(--accent-cyan);
+            padding: 4px 8px; border-radius: 4px; font-size: 0.7rem; cursor: pointer; transition: 0.2s;
+        }
+        .btn-lookup:hover { background: var(--accent-cyan); color: #000; }
+        .input-group { position: relative; } /* For absolute btn-lookup */
+
     </style>
 </head>
 <body>
@@ -404,11 +424,13 @@
                 <h3>Process (proc.*)</h3>
                 <div class="input-group">
                     <label>Process Name (proc.name)</label>
-                    <input type="text" id="f_proc_name" placeholder="e.g. nginx, sshd" onchange="buildFilterQuery()">
+                    <input type="text" id="f_proc_name" placeholder="e.g. nginx, sshd" onchange="buildFilterQuery()" style="padding-right: 60px;">
+                    <button class="btn-lookup" onclick="openLookup('PROCESSES', 'f_proc_name', 'name')">🔍 Seç</button>
                 </div>
                 <div class="input-group">
                     <label>Process ID (proc.pid)</label>
-                    <input type="text" id="f_proc_pid" placeholder="e.g. 1234" onchange="buildFilterQuery()">
+                    <input type="text" id="f_proc_pid" placeholder="e.g. 1234" onchange="buildFilterQuery()" style="padding-right: 60px;">
+                    <button class="btn-lookup" onclick="openLookup('PROCESSES', 'f_proc_pid', 'pid')">🔍 Seç</button>
                 </div>
                 <div class="input-group">
                     <label>Executable (proc.exe)</label>
@@ -433,7 +455,8 @@
                 </div>
                 <div class="input-group">
                     <label>Port (fd.port)</label>
-                    <input type="number" id="f_fd_port" placeholder="80, 443" onchange="buildFilterQuery()">
+                    <input type="number" id="f_fd_port" placeholder="80, 443" onchange="buildFilterQuery()" style="padding-right: 60px;">
+                    <button class="btn-lookup" onclick="openLookup('PORTS', 'f_fd_port', 'port')">🔍 Seç</button>
                 </div>
                 <div class="input-group">
                     <label>FD Type (fd.type)</label>
@@ -470,7 +493,8 @@
                 <h3>User & Group</h3>
                 <div class="input-group">
                     <label>User Name (user.name)</label>
-                    <input type="text" id="f_user_name" placeholder="root, drvoid" onchange="buildFilterQuery()">
+                    <input type="text" id="f_user_name" placeholder="root, drvoid" onchange="buildFilterQuery()" style="padding-right: 60px;">
+                    <button class="btn-lookup" onclick="openLookup('USERS', 'f_user_name', 'user')">🔍 Seç</button>
                 </div>
             </div>
 
@@ -583,6 +607,22 @@ const sysdig = spawn('sysdig', ['-j']); // JSON çıktısı verir
 // WebSocket ile bu panele fırlatın...</pre>
             </div>
             
+        </div>
+    </div>
+
+    <!-- LOOKUP MODAL -->
+    <div class="modal" id="lookupModal">
+        <div class="modal-content">
+            <button class="close-btn" onclick="closeLookupModal()">×</button>
+            <h2 id="lookup-title"><span><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:8px"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg></span> Select Resource</h2>
+            <input type="text" class="lookup-search" id="lookup-search" placeholder="Listeyi filtrele..." onkeyup="filterLookupTable()">
+            <div class="lookup-table-wrap">
+                <table class="lookup-table" id="lookup-table">
+                    <thead id="lookup-thead"></thead>
+                    <tbody id="lookup-tbody"></tbody>
+                </table>
+            </div>
+            <p style="font-size: 0.8rem; color: var(--text-muted); text-align:right; margin:0;" id="lookup-count">0 satır yüklendi.</p>
         </div>
     </div>
 
@@ -726,6 +766,10 @@ const sysdig = spawn('sysdig', ['-j']); // JSON çıktısı verir
                         }
                         return;
                     }
+                    if (data.lookup_type) {
+                        renderLookupData(data.lookup_type, data.data);
+                        return;
+                    }
                     handleIncomingEvent(data);
                 } catch(e) {}
             };
@@ -811,6 +855,66 @@ const sysdig = spawn('sysdig', ['-j']); // JSON çıktısı verir
              } else {
                  logs.innerText += "Error: Socket not connected. Lütfen run.sh ile arka planı aktif edin.\n";
              }
+        }
+
+        /* === Dynamic Lookup Modals === */
+        let currentLookupTargetId = null;
+        let currentLookupDataKey = null;
+
+        function openLookup(lookupType, targetInputId, dataKey) {
+            currentLookupTargetId = targetInputId;
+            currentLookupDataKey = dataKey; // determines which field gets targeted
+            
+            document.getElementById('lookupModal').classList.add('active');
+            document.getElementById('lookup-title').innerHTML = `<span><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg></span> Fetching ${lookupType}...`;
+            document.getElementById('lookup-tbody').innerHTML = `<tr><td colspan="4" style="text-align:center; padding: 24px;">Arka plandan veriler çekiliyor...</td></tr>`;
+            document.getElementById('lookup-count').innerText = "0 satır";
+
+            if(window.ws && window.ws.readyState === WebSocket.OPEN) {
+                 window.ws.send(JSON.stringify({ command: `GET_${lookupType}` }));
+            }
+        }
+
+        function closeLookupModal() { document.getElementById('lookupModal').classList.remove('active'); }
+
+        function renderLookupData(lookupType, rawData) {
+            const tableHead = document.getElementById('lookup-thead');
+            const tableBody = document.getElementById('lookup-tbody');
+            
+            let headers = "";
+            if(rawData.length > 0) {
+                headers = "<tr>" + Object.keys(rawData[0]).map(k => `<th>${k.toUpperCase()}</th>`).join("") + "</tr>";
+            }
+            tableHead.innerHTML = headers;
+
+            let rows = "";
+            rawData.forEach(rowItem => {
+                const injectVal = rowItem[currentLookupDataKey];
+                rows += `<tr onclick="selectLookupRow('${injectVal}')">`;
+                Object.values(rowItem).forEach(val => { rows += `<td>${val}</td>`; });
+                rows += `</tr>`;
+            });
+
+            tableBody.innerHTML = rows;
+            document.getElementById('lookup-title').innerHTML = `<span><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="9" y1="21" x2="9" y2="9"></line></svg></span> Select ${lookupType}`;
+            document.getElementById('lookup-count').innerText = `${rawData.length} kayıt bulundu.`;
+        }
+
+        function selectLookupRow(value) {
+            if(currentLookupTargetId) {
+                const inputEle = document.getElementById(currentLookupTargetId);
+                inputEle.value = value;
+                buildFilterQuery(); // trigger recompile
+            }
+            closeLookupModal();
+        }
+
+        function filterLookupTable() {
+            const term = document.getElementById('lookup-search').value.toLowerCase();
+            const trs = document.getElementById('lookup-tbody').getElementsByTagName('tr');
+            for(let i=0; i<trs.length; i++) {
+                trs[i].style.display = trs[i].innerText.toLowerCase().includes(term) ? "" : "none";
+            }
         }
 
         /* === Demo Data Generator === */
