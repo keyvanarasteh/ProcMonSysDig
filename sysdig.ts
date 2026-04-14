@@ -68,6 +68,46 @@ wss.on('connection', (ws) => {
                 });
 
             } 
+            else if (req.command === 'INSTALL_DEPS') {
+                console.log('[*] UI Triggered automated dependency installation...');
+                const { exec } = require('child_process');
+                const cmd = `
+                    echo "[+] Starting automated installation..."
+                    if ! command -v sysdig > /dev/null 2>&1; then 
+                        echo "[*] Installing sysdig..."
+                        sudo apt-get update -y && sudo apt-get install sysdig linux-headers-$(uname -r) -y
+                    else 
+                        echo "[+] Sysdig is already installed!"
+                    fi
+                    echo "[*] Checking Microsoft eBPF dependencies..."
+                    if ! dpkg -s sysinternalsebpf >/dev/null 2>&1; then
+                        echo "[-] Fetching Microsoft ProcMon packages..."
+                        wget -qO sysinternalsebpf.deb https://packages.microsoft.com/debian/12/prod/pool/main/s/sysinternalsebpf/sysinternalsebpf_1.5.0_amd64.deb
+                        sudo dpkg -i sysinternalsebpf.deb || true
+                        wget -qO procmon.deb https://packages.microsoft.com/debian/12/prod/pool/main/p/procmon/procmon_2.2.0_amd64.deb
+                        sudo dpkg -i procmon.deb || true
+                        sudo dpkg --configure procmon || true
+                        rm -f sysinternalsebpf.deb procmon.deb
+                    else
+                        echo "[+] Microsoft eBPF dependencies already present."
+                    fi
+                    echo "[+] All dependencies verified!"
+                `;
+
+                const installProcess = exec(cmd);
+
+                installProcess.stdout.on('data', (data: any) => {
+                    ws.send(JSON.stringify({ install_log: data.toString() }));
+                });
+
+                installProcess.stderr.on('data', (data: any) => {
+                    ws.send(JSON.stringify({ install_log: `[ERR] ${data.toString()}` }));
+                });
+
+                installProcess.on('close', (code: any) => {
+                    ws.send(JSON.stringify({ install_log: `\n[--- Installation complete with code ${code} ---]\n` }));
+                });
+            }
             else if (req.command === 'STOP') {
                 console.log('[*] Stopping capture...');
                 if (sysdigProcess) {

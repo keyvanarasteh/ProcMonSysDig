@@ -529,6 +529,17 @@
                 Bu panel tek başına (frontend olarak) çalışmaktadır. Sisteminizi izlemek ve bu paneli bağlamak için arka planda Linux kayıt araçlarını (Procmon / Sysdig) kurmanız gerekmektedir.
             </p>
 
+            <!-- START AUTO INSTALLER WIDGET -->
+            <div class="setup-instruction" style="border-left-color: var(--accent-green); background: rgba(0, 255, 157, 0.05);">
+                <h4 style="display:flex; justify-content:space-between; align-items:center;">
+                    <span>⚡ 1-Click Automated Setup (Tavsiye Edilir)</span>
+                    <button class="btn btn-green" onclick="triggerAutoInstall()">🚀 Run Auto-Installer</button>
+                </h4>
+                <p>Aşağıdaki manuel adımlarla uğraşmak yerine, arka uç köprüsü üzerinden her şeyi doğrudan panelden otomatik kurun.</p>
+                <pre id="install-logs" style="margin-top:12px; height: 160px; display:none; background: #050b14; color:#00ff9d;"></pre>
+            </div>
+            <!-- END AUTO INSTALLER WIDGET -->
+
             <div class="setup-instruction">
                 <h4>1. Sysdig ve Kernel Başlıklarını Kurma</h4>
                 <p>Eğer sadece `sysdig` komutunu kurarak basit bir socket başlatacaksanız, doğrudan apt depolarını kullanabilirsiniz:</p>
@@ -678,6 +689,15 @@ const sysdig = spawn('sysdig', ['-j']); // JSON çıktısı verir
             window.ws.onmessage = (event) => {
                 try {
                     const data = JSON.parse(event.data);
+                    if (data.install_log) {
+                        const logs = document.getElementById('install-logs');
+                        if(logs) {
+                            logs.style.display = 'block';
+                            logs.innerHTML += data.install_log;
+                            logs.scrollTop = logs.scrollHeight;
+                        }
+                        return;
+                    }
                     handleIncomingEvent(data);
                 } catch(e) {}
             };
@@ -746,6 +766,18 @@ const sysdig = spawn('sysdig', ['-j']); // JSON çıktısı verir
         /* === Modal Logic === */
         function openSetupModal() { document.getElementById('setupModal').classList.add('active'); }
         function closeSetupModal() { document.getElementById('setupModal').classList.remove('active'); }
+
+        /* === 1-Click Auto Installer === */
+        function triggerAutoInstall() {
+             const logs = document.getElementById('install-logs');
+             logs.style.display = 'block';
+             logs.innerText = "[*] UI Installation triggered from Dashboard...\n[*] Sending command to backend...\n";
+             if(window.ws && window.ws.readyState === WebSocket.OPEN) {
+                 window.ws.send(JSON.stringify({ command: "INSTALL_DEPS" }));
+             } else {
+                 logs.innerText += "Error: Socket not connected. Lütfen run.sh ile arka planı aktif edin.\n";
+             }
+        }
 
         /* === Demo Data Generator === */
         function toggleDemoMode() {
