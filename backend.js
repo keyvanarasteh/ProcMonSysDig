@@ -13,7 +13,7 @@ wss.on('connection', (ws) => {
     console.log('[+] Web UI panel connected.');
 
     const safeSend = (payload) => {
-        if (ws && ws.readyState === WebSocket.OPEN) {
+        if (ws && ws.readyState === ws.OPEN) {
             try { ws.send(payload); } catch (err) { console.error('WS Send error:', err); }
         }
     };
