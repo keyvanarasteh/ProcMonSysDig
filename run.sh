@@ -49,13 +49,12 @@ else
     echo -e "${GREEN}[+] Backend NodeJS modülleri hazır.${NC}"
 fi
 
-echo -e "\n${GREEN}[*] Adım 1: TypeScript WebSocket Sunucusu Başlatılıyor...${NC}"
-# ts-node ile arka planda sysdig köprüsünü başlatıyoruz
-npx ts-node sysdig.ts &
+echo -e "\n${GREEN}[*] Adım 1: TypeScript WebSocket Sunucusu Derlenip Başlatılıyor...${NC}"
+npx tsc sysdig.ts
+node sysdig.js &
 TS_PID=$!
 
-# Sunucunun bağlanması ve TS-Node'un derlenmesi için biraz vakte ihtiyacı var.
-# Daha önce arayüz sunucudan hızlı açıldığı için Socket: Disconnected veriyordu. 5 saniye bekliyoruz.
+# Sunucunun bağlanması ve Node'un dinlemeye geçmesi için 5 saniye bekliyoruz
 sleep 5
 
 echo -e "${GREEN}[*] Adım 2: Web Arayüzü Tarayıcıda Açılıyor...${NC}"
