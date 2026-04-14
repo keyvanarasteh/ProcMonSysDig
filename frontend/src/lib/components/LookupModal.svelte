@@ -1,3 +1,4 @@
+<svelte:options runes={false} />
 <script>
     import { lookupModalOpen, lookupType, lookupTargetInput, lookupDataKey, lookupData, filters, treeData } from '../stores.js';
     import { sendWebSocketCommand } from '../websocket.js';
@@ -93,9 +94,9 @@
 {#if $lookupModalOpen}
     <!-- svelte-ignore a11y-click-events-have-key-events -->
     <!-- svelte-ignore a11y-no-static-element-interactions -->
-    <div class="fixed inset-0 bg-[rgba(0,0,0,0.85)] backdrop-blur-md z-[1000] flex items-center justify-center animate-[modalFade_0.3s_ease]" on:click|self={close}>
+    <div class="fixed inset-0 bg-[rgba(0,0,0,0.85)] backdrop-blur-md z-[1000] flex items-center justify-center animate-[modalFade_0.3s_ease]" onclick|self={close}>
         <div class="bg-[var(--bg-color)] border border-[var(--border-color)] rounded-xl w-[95vw] max-w-[1600px] h-[85vh] p-6 flex flex-col relative shadow-[0_0_50px_rgba(0,0,0,0.5)]">
-            <button class="absolute top-6 right-6 bg-transparent border-none text-[var(--text-muted)] text-2xl cursor-pointer hover:text-[var(--accent-red)] hover:scale-110 transition-transform" on:click={close}>×</button>
+            <button class="absolute top-6 right-6 bg-transparent border-none text-[var(--text-muted)] text-2xl cursor-pointer hover:text-[var(--accent-red)] hover:scale-110 transition-transform" onclick={close}>×</button>
             <h2 class="text-[var(--text-main)] mb-6 flex items-center gap-3 text-xl font-bold">
                 <span class="text-[var(--accent-cyan)]">
                     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
@@ -126,7 +127,7 @@
                         {#each rootsLookup as proc, idx}
                             <!-- svelte-ignore a11y-click-events-have-key-events -->
                             <!-- svelte-ignore a11y-no-static-element-interactions -->
-                            <div on:click={() => selectRow($lookupDataKey === 'pid' ? proc.pid : proc.comm)} class="cursor-pointer hover:bg-[rgba(0,255,157,0.05)]">
+                            <div onclick={() => selectRow($lookupDataKey === 'pid' ? proc.pid : proc.comm)} class="cursor-pointer hover:bg-[rgba(0,255,157,0.05)]">
                                 <TreeNode 
                                     {proc} 
                                     depth={0} 
@@ -156,7 +157,7 @@
                                 <tr><td colspan="4" class="text-center p-6 text-[var(--text-muted)]">Arka plandan veriler çekiliyor...</td></tr>
                             {/if}
                             {#each filteredData as rowObj}
-                                <tr class="hover:bg-[rgba(0,255,157,0.15)] hover:text-[var(--accent-green)] cursor-pointer transition-colors" on:click={() => selectRow(rowObj[$lookupDataKey])}>
+                                <tr class="hover:bg-[rgba(0,255,157,0.15)] hover:text-[var(--accent-green)] cursor-pointer transition-colors" onclick={() => selectRow(rowObj[$lookupDataKey])}>
                                     {#each Object.values(rowObj) as val}
                                         <td class="p-2 px-4 border-b border-[rgba(255,255,255,0.03)] font-mono text-[0.85rem]">{val}</td>
                                     {/each}

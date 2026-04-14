@@ -1,3 +1,4 @@
+<svelte:options runes={false} />
 <script>
     import { filters, filterQuery, lookupModalOpen, lookupType, lookupTargetInput, lookupDataKey } from '../stores.js';
 
@@ -22,13 +23,13 @@
         <div class="relative flex flex-col gap-1 mb-3">
             <label class="text-[0.8rem] text-[var(--text-muted)] font-semibold">Process Name (proc.name)</label>
             <input type="text" bind:value={$filters.proc_name} placeholder="e.g. nginx, sshd" class="w-full bg-[rgba(0,0,0,0.3)] border border-[rgba(255,255,255,0.1)] text-white px-3 py-2 rounded focus:border-[var(--accent-cyan)] focus:shadow-[0_0_0_2px_rgba(0,240,255,0.15)] outline-none font-mono text-sm pr-[60px]" />
-            <button class="absolute right-1 top-[22px] bg-[rgba(0,240,255,0.1)] border border-[var(--accent-cyan)] text-[var(--accent-cyan)] px-2 py-1 rounded text-[0.7rem] cursor-pointer hover:bg-[var(--accent-cyan)] hover:text-black transition-colors" on:click={() => triggerLookup('PROCESSES', 'proc_name', 'name')}>🔍 Seç</button>
+            <button class="absolute right-1 top-[22px] bg-[rgba(0,240,255,0.1)] border border-[var(--accent-cyan)] text-[var(--accent-cyan)] px-2 py-1 rounded text-[0.7rem] cursor-pointer hover:bg-[var(--accent-cyan)] hover:text-black transition-colors" onclick={() => triggerLookup('PROCESSES', 'proc_name', 'name')}>🔍 Seç</button>
         </div>
 
         <div class="relative flex flex-col gap-1 mb-3">
             <label class="text-[0.8rem] text-[var(--text-muted)] font-semibold">Process ID (proc.pid)</label>
             <input type="text" bind:value={$filters.proc_pid} placeholder="e.g. 1234" class="w-full bg-[rgba(0,0,0,0.3)] border border-[rgba(255,255,255,0.1)] text-white px-3 py-2 rounded focus:border-[var(--accent-cyan)] focus:shadow-[0_0_0_2px_rgba(0,240,255,0.15)] outline-none font-mono text-sm pr-[60px]" />
-            <button class="absolute right-1 top-[22px] bg-[rgba(0,240,255,0.1)] border border-[var(--accent-cyan)] text-[var(--accent-cyan)] px-2 py-1 rounded text-[0.7rem] cursor-pointer hover:bg-[var(--accent-cyan)] hover:text-black transition-colors" on:click={() => triggerLookup('PROCESSES', 'proc_pid', 'pid')}>🔍 Seç</button>
+            <button class="absolute right-1 top-[22px] bg-[rgba(0,240,255,0.1)] border border-[var(--accent-cyan)] text-[var(--accent-cyan)] px-2 py-1 rounded text-[0.7rem] cursor-pointer hover:bg-[var(--accent-cyan)] hover:text-black transition-colors" onclick={() => triggerLookup('PROCESSES', 'proc_pid', 'pid')}>🔍 Seç</button>
         </div>
 
         <div class="relative flex flex-col gap-1 mb-3">
@@ -59,7 +60,7 @@
         <div class="relative flex flex-col gap-1 mb-3">
             <label class="text-[0.8rem] text-[var(--text-muted)] font-semibold">Port (fd.port)</label>
             <input type="number" bind:value={$filters.fd_port} placeholder="80, 443" class="w-full bg-[rgba(0,0,0,0.3)] border border-[rgba(255,255,255,0.1)] text-white px-3 py-2 rounded focus:border-[var(--accent-cyan)] focus:shadow-[0_0_0_2px_rgba(0,240,255,0.15)] outline-none font-mono text-sm pr-[60px]" />
-            <button class="absolute right-1 top-[22px] bg-[rgba(0,240,255,0.1)] border border-[var(--accent-cyan)] text-[var(--accent-cyan)] px-2 py-1 rounded text-[0.7rem] cursor-pointer hover:bg-[var(--accent-cyan)] hover:text-black transition-colors" on:click={() => triggerLookup('PORTS', 'fd_port', 'port')}>🔍 Seç</button>
+            <button class="absolute right-1 top-[22px] bg-[rgba(0,240,255,0.1)] border border-[var(--accent-cyan)] text-[var(--accent-cyan)] px-2 py-1 rounded text-[0.7rem] cursor-pointer hover:bg-[var(--accent-cyan)] hover:text-black transition-colors" onclick={() => triggerLookup('PORTS', 'fd_port', 'port')}>🔍 Seç</button>
         </div>
 
         <div class="relative flex flex-col gap-1 mb-1">
@@ -101,7 +102,7 @@
         <div class="relative flex flex-col gap-1 mb-1">
             <label class="text-[0.8rem] text-[var(--text-muted)] font-semibold">User Name (user.name)</label>
             <input type="text" bind:value={$filters.user_name} placeholder="root, drvoid" class="w-full bg-[rgba(0,0,0,0.3)] border border-[rgba(255,255,255,0.1)] text-white px-3 py-2 rounded focus:border-[var(--accent-cyan)] focus:shadow-[0_0_0_2px_rgba(0,240,255,0.15)] outline-none font-mono text-sm pr-[60px]" />
-            <button class="absolute right-1 top-[22px] bg-[rgba(0,240,255,0.1)] border border-[var(--accent-cyan)] text-[var(--accent-cyan)] px-2 py-1 rounded text-[0.7rem] cursor-pointer hover:bg-[var(--accent-cyan)] hover:text-black transition-colors" on:click={() => triggerLookup('USERS', 'user_name', 'user')}>🔍 Seç</button>
+            <button class="absolute right-1 top-[22px] bg-[rgba(0,240,255,0.1)] border border-[var(--accent-cyan)] text-[var(--accent-cyan)] px-2 py-1 rounded text-[0.7rem] cursor-pointer hover:bg-[var(--accent-cyan)] hover:text-black transition-colors" onclick={() => triggerLookup('USERS', 'user_name', 'user')}>🔍 Seç</button>
         </div>
     </div>
 

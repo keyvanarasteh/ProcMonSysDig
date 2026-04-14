@@ -1,3 +1,4 @@
+<svelte:options runes={false} />
 <script>
     import { treeData, treeAutoRefresh, treeSearchTerm } from '../stores.js';
     import { sendWebSocketCommand } from '../websocket.js';
@@ -84,8 +85,8 @@
 <div class="flex-1 overflow-hidden flex flex-col">
     <div class="flex items-center gap-3 mb-3">
         <input type="text" bind:value={$treeSearchTerm} placeholder="🔍 Süreç ara... (isim, PID, kullanıcı)" class="flex-1 bg-[rgba(0,0,0,0.4)] border border-[rgba(255,255,255,0.1)] text-white px-4 py-2.5 rounded-md font-sans text-[0.85rem] outline-none focus:border-[var(--accent-cyan)] focus:shadow-[0_0_0_2px_rgba(0,240,255,0.15)] transition-colors" />
-        <button class="bg-transparent border border-[var(--accent-cyan)] text-[var(--accent-cyan)] px-4 py-2.5 rounded-md font-semibold font-sans hover:bg-[rgba(0,240,255,0.1)] transition-all cursor-pointer whitespace-nowrap" on:click={loadProcessTree}>⟳ Yenile</button>
-        <button class="bg-transparent border px-4 py-2.5 rounded-md font-semibold font-sans transition-all cursor-pointer whitespace-nowrap {$treeAutoRefresh ? 'border-[var(--accent-green)] text-[var(--accent-green)]' : 'border-[rgba(255,255,255,0.3)] text-[var(--text-muted)] hover:border-[var(--accent-cyan)] hover:text-[var(--accent-cyan)]'}" on:click={toggleTreeAutoRefresh}>
+        <button class="bg-transparent border border-[var(--accent-cyan)] text-[var(--accent-cyan)] px-4 py-2.5 rounded-md font-semibold font-sans hover:bg-[rgba(0,240,255,0.1)] transition-all cursor-pointer whitespace-nowrap" onclick={loadProcessTree}>⟳ Yenile</button>
+        <button class="bg-transparent border px-4 py-2.5 rounded-md font-semibold font-sans transition-all cursor-pointer whitespace-nowrap {$treeAutoRefresh ? 'border-[var(--accent-green)] text-[var(--accent-green)]' : 'border-[rgba(255,255,255,0.3)] text-[var(--text-muted)] hover:border-[var(--accent-cyan)] hover:text-[var(--accent-cyan)]'}" onclick={toggleTreeAutoRefresh}>
             {$treeAutoRefresh ? '⏸ Durdur' : '▶ Otomatik'}
         </button>
     </div>
