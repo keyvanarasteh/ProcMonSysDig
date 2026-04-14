@@ -1,39 +1,30 @@
 import { WebSocketServer } from 'ws';
-import { spawn, ChildProcess } from 'child_process';
+import { spawn } from 'child_process';
 import * as readline from 'readline';
-
 // Create WebSocket server on port 8080
 const wss = new WebSocketServer({ port: 8080 });
-let sysdigProcess: ChildProcess | null = null;
-
+let sysdigProcess = null;
 console.log("🚀 Sysdig WebSocket Server running on ws://localhost:8080");
 console.log("⚠️ Make sure you are running this script with 'sudo' privileges!");
-
 wss.on('connection', (ws) => {
     console.log('[+] Web UI panel connected.');
-
     ws.on('message', (message) => {
         try {
             const req = JSON.parse(message.toString());
-            
             if (req.command === 'START') {
                 if (sysdigProcess) {
                     sysdigProcess.kill();
                     sysdigProcess = null;
                 }
-
                 console.log(`[*] Starting capture with filter: ${req.filter || "None"}`);
-                
                 // Construct command arguments
                 const args = ['-j'];
                 if (req.filter && req.filter.trim() !== '') {
                     args.push(req.filter);
                 }
-
                 // Spawn Sysdig
                 // Sysdig must be installed and this TS process must be ran as root.
                 sysdigProcess = spawn('sysdig', args);
-
                 if (sysdigProcess.stdout) {
                     const rl = readline.createInterface({ input: sysdigProcess.stdout });
                     rl.on('line', (line) => {
@@ -51,23 +42,21 @@ wss.on('connection', (ws) => {
                                 res: sysdigEvent['evt.res'] || '0'
                             };
                             ws.send(JSON.stringify(payload));
-                        } catch (e) {
+                        }
+                        catch (e) {
                             // Ignored (unparseable line)
                         }
                     });
                 }
-                
                 if (sysdigProcess.stderr) {
                     sysdigProcess.stderr.on('data', (d) => {
                         console.log(`[sysdig error/log] ${d}`);
                     });
                 }
-
                 sysdigProcess.on('close', (code) => {
                     console.log(`[-] Sysdig process exited with code ${code}`);
                 });
-
-            } 
+            }
             else if (req.command === 'INSTALL_DEPS') {
                 console.log('[*] UI Triggered automated dependency installation...');
                 const { exec } = require('child_process');
@@ -93,18 +82,14 @@ wss.on('connection', (ws) => {
                     fi
                     echo "[+] All dependencies verified!"
                 `;
-
                 const installProcess = exec(cmd);
-
-                installProcess.stdout.on('data', (data: any) => {
+                installProcess.stdout.on('data', (data) => {
                     ws.send(JSON.stringify({ install_log: data.toString() }));
                 });
-
-                installProcess.stderr.on('data', (data: any) => {
+                installProcess.stderr.on('data', (data) => {
                     ws.send(JSON.stringify({ install_log: `[ERR] ${data.toString()}` }));
                 });
-
-                installProcess.on('close', (code: any) => {
+                installProcess.on('close', (code) => {
                     ws.send(JSON.stringify({ install_log: `\n[--- Installation complete with code ${code} ---]\n` }));
                 });
             }
@@ -115,11 +100,11 @@ wss.on('connection', (ws) => {
                     sysdigProcess = null;
                 }
             }
-        } catch(e) {
+        }
+        catch (e) {
             console.error("Error processing message:", e);
         }
     });
-
     ws.on('close', () => {
         console.log('[-] Web UI panel disconnected.');
         if (sysdigProcess) {

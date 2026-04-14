@@ -529,6 +529,19 @@
                 Bu panel tek başına (frontend olarak) çalışmaktadır. Sisteminizi izlemek ve bu paneli bağlamak için arka planda Linux kayıt araçlarını (Procmon / Sysdig) kurmanız gerekmektedir.
             </p>
 
+            <!-- START BACKEND VERSIONS WIDGET -->
+            <div class="setup-instruction" style="border-left-color: var(--accent-cyan); background: rgba(0, 240, 255, 0.05);">
+                <h4 style="display:flex; justify-content:space-between; align-items:center;">
+                    <span>💻 Servis Bağlantıları & Sürümler</span>
+                    <button class="btn" style="padding: 4px 12px; font-size: 0.75rem;" onclick="pollVersions()">⟳ Yenile</button>
+                </h4>
+                <div style="margin-top:12px; font-family:var(--font-mono); font-size:0.85rem;">
+                    <p style="margin-bottom:8px;"><strong>🛠 Sysdig (eBPF Motoru):</strong> <span id="status-sysdig" style="color:var(--accent-orange)">Sorgulanıyor...</span></p>
+                    <p style="margin:0;"><strong>🛠 Procmon (Microsoft eBPF):</strong> <span id="status-procmon" style="color:var(--accent-orange)">Sorgulanıyor...</span></p>
+                </div>
+            </div>
+            <!-- END BACKEND VERSIONS WIDGET -->
+
             <!-- START AUTO INSTALLER WIDGET -->
             <div class="setup-instruction" style="border-left-color: var(--accent-green); background: rgba(0, 255, 157, 0.05);">
                 <h4 style="display:flex; justify-content:space-between; align-items:center;">
@@ -677,6 +690,8 @@ const sysdig = spawn('sysdig', ['-j']); // JSON çıktısı verir
             window.ws.onopen = () => {
                 console.log("WebSocket connection established");
                 document.getElementById('conn-status').innerHTML = '<span class="dot connected" id="conn-indicator"></span> Socket: Connected';
+                // Request version info when connected
+                pollVersions();
             };
             
             window.ws.onclose = () => {
@@ -695,6 +710,19 @@ const sysdig = spawn('sysdig', ['-j']); // JSON çıktısı verir
                             logs.style.display = 'block';
                             logs.innerHTML += data.install_log;
                             logs.scrollTop = logs.scrollHeight;
+                        }
+                        return;
+                    }
+                    if (data.sys_status) {
+                        const sd = document.getElementById('status-sysdig');
+                        const pm = document.getElementById('status-procmon');
+                        if(sd) {
+                            sd.innerText = data.sys_status.sysdig;
+                            sd.style.color = data.sys_status.sysdig.includes("Not") ? "var(--accent-red)" : "var(--accent-green)";
+                        }
+                        if(pm) {
+                            pm.innerText = data.sys_status.procmon;
+                            pm.style.color = data.sys_status.procmon.includes("Not") ? "var(--accent-red)" : "var(--accent-green)";
                         }
                         return;
                     }
@@ -764,8 +792,14 @@ const sysdig = spawn('sysdig', ['-j']); // JSON çıktısı verir
         }
 
         /* === Modal Logic === */
-        function openSetupModal() { document.getElementById('setupModal').classList.add('active'); }
+        function openSetupModal() { document.getElementById('setupModal').classList.add('active'); pollVersions(); }
         function closeSetupModal() { document.getElementById('setupModal').classList.remove('active'); }
+
+        function pollVersions() {
+             if(window.ws && window.ws.readyState === WebSocket.OPEN) {
+                 window.ws.send(JSON.stringify({ command: "CHECK_STATUS" }));
+             }
+        }
 
         /* === 1-Click Auto Installer === */
         function triggerAutoInstall() {

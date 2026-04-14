@@ -49,8 +49,7 @@ else
     echo -e "${GREEN}[+] Backend NodeJS modülleri hazır.${NC}"
 fi
 
-echo -e "\n${GREEN}[*] Adım 1: TypeScript WebSocket Sunucusu Derlenip Başlatılıyor...${NC}"
-npx tsc sysdig.ts
+echo -e "\n${GREEN}[*] Adım 1: WebSocket Backend Sunucusu Başlatılıyor...${NC}"
 node sysdig.js &
 TS_PID=$!
 
