@@ -9,13 +9,12 @@
     export let childrenMap = {};
     export let isLast = false;
     export let searchTerm = '';
-    export let expandedMap = {}; // passed from parent or globally
+    export let expandedMap = {};
 
-    // Calculate usage
     $: cpuVal = parseFloat(proc.cpu) || 0;
     $: memVal = parseFloat(proc.mem) || 0;
-    $: cpuClass = cpuVal >= 50 ? 'text-[var(--accent-red)]' : (cpuVal >= 10 ? 'text-[var(--accent-orange)]' : 'text-[var(--accent-green)]');
-    $: memClass = memVal >= 50 ? 'text-[var(--accent-red)]' : (memVal >= 10 ? 'text-[var(--accent-orange)]' : 'text-[var(--accent-green)]');
+    $: cpuClass = cpuVal >= 50 ? 'usage-high' : (cpuVal >= 10 ? 'usage-mid' : 'usage-low');
+    $: memClass = memVal >= 50 ? 'usage-high' : (memVal >= 10 ? 'usage-mid' : 'usage-low');
 
     $: children = childrenMap[proc.pid] || [];
     $: hasChildren = children.length > 0;
@@ -26,7 +25,6 @@
         }
     }
 
-    // Default expand state
     $: if (expandedMap[proc.pid] === undefined) {
         expandedMap[proc.pid] = depth < 2;
     }
@@ -34,69 +32,54 @@
 
     function toggleNode() {
         expandedMap[proc.pid] = !expandedMap[proc.pid];
-        expandedMap = expandedMap; // trigger reactivity
+        expandedMap = expandedMap; 
     }
 
-    // Tree name color coding
     $: isRootProc = proc.user === 'root' && proc.pid === '1';
     $: isKernel = proc.pid === '2' || proc.comm.startsWith('k');
 
-    // Stat badge
     $: statChar = proc.stat ? proc.stat.charAt(0) : '?';
-    $: statClass = getStatClass(statChar);
-
-    function getStatClass(char) {
-        if (char === 'R') return 'bg-[rgba(0,255,157,0.15)] text-[var(--accent-green)]';
-        if (char === 'S') return 'bg-[rgba(0,240,255,0.1)] text-[var(--accent-cyan)]';
-        if (char === 'Z') return 'bg-[rgba(255,42,95,0.15)] text-[var(--accent-red)]';
-        if (char === 'D') return 'bg-[rgba(255,176,58,0.15)] text-[var(--accent-orange)]';
-        return 'bg-[rgba(148,163,184,0.15)] text-[var(--text-muted)]';
-    }
-
 </script>
 
-<div class="flex items-center min-h-[32px] border-b border-[rgba(255,255,255,0.02)] relative transition-colors duration-150 hover:bg-[rgba(0,240,255,0.04)] min-w-[1400px]">
-    <div class="px-2 py-1.5 text-[0.8rem] font-mono whitespace-nowrap overflow-hidden text-ellipsis text-[var(--text-main)] w-[280px] shrink-0 flex items-center">
-        <div class="inline-flex items-center">
+<div class="tree-node">
+    <div class="tree-cell col-tree flex" style="display: flex; align-items: center;">
+        <span class="tree-indent">
             {#each Array(depth) as _, i}
-                <span class="w-5 h-8 relative inline-block">
-                    {#if i < depth - 1}
-                        <span class="absolute left-[9px] top-0 bottom-0 w-[1px] bg-[rgba(0,240,255,0.15)] {ancestorIsLast[i] ? 'hidden' : 'block'}"></span>
-                    {:else}
-                        <span class="absolute left-[9px] top-0 {isLast ? 'h-[50%]' : 'bottom-0'} w-[1px] bg-[rgba(0,240,255,0.15)]"></span>
-                        <span class="absolute left-[9px] top-[50%] w-[10px] h-[1px] bg-[rgba(0,240,255,0.15)]"></span>
+                <span class="tree-indent-unit {ancestorIsLast[i] ? '' : 'line'}">
+                    {#if i === depth - 1}
+                        <span class="tree-indent-unit {isLast ? 'last-branch' : 'branch'}" style="position:absolute; left:0;"></span>
                     {/if}
                 </span>
             {/each}
-        </div>
+        </span>
         
         {#if hasChildren}
             <!-- svelte-ignore a11y-click-events-have-key-events -->
             <!-- svelte-ignore a11y-no-static-element-interactions -->
-            <span class="w-[18px] h-[18px] inline-flex items-center justify-center cursor-pointer text-[0.7rem] text-[var(--accent-cyan)] bg-[rgba(0,240,255,0.08)] border border-[rgba(0,240,255,0.2)] rounded mr-1.5 transition-all shrink-0 hover:bg-[rgba(0,240,255,0.2)] hover:scale-110" on:click={toggleNode}>
+            <span class="tree-toggle" on:click={toggleNode}>
                 {expanded ? '▼' : '▶'}
             </span>
         {:else}
-            <span class="w-[18px] h-[18px] inline-flex items-center justify-center text-[0.7rem] bg-transparent border-transparent text-[rgba(0,240,255,0.3)] mr-1.5 shrink-0 cursor-default">·</span>
+            <span class="tree-toggle leaf">·</span>
         {/if}
 
-        <span class="font-semibold {isRootProc ? 'text-[var(--accent-orange)]' : isKernel ? 'text-[var(--text-muted)] italic' : 'text-[var(--text-main)]'}">{proc.comm}</span>
+        <span class="tree-proc-name {isRootProc ? 'root-proc' : isKernel ? 'kernel-proc' : ''}">{proc.comm}</span>
         
         {#if hasChildren}
-            <span class="text-[0.65rem] bg-[rgba(0,240,255,0.1)] text-[var(--accent-cyan)] px-1.5 py-[1px] rounded-full ml-1.5">{children.length}</span>
+            <span class="tree-count-badge">{children.length}</span>
         {/if}
     </div>
     
-    <div class="px-2 py-1.5 text-[0.8rem] font-mono whitespace-nowrap overflow-hidden text-ellipsis text-[var(--text-muted)] w-[70px] shrink-0">{proc.pid}</div>
-    <div class="px-2 py-1.5 text-[0.8rem] font-mono whitespace-nowrap overflow-hidden text-ellipsis text-[var(--text-muted)] w-[70px] shrink-0">{proc.ppid}</div>
-    <div class="px-2 py-1.5 text-[0.8rem] font-mono whitespace-nowrap overflow-hidden text-ellipsis text-[var(--text-main)] w-[90px] shrink-0">{proc.user}</div>
-    <div class="px-2 py-1.5 text-[0.8rem] font-mono whitespace-nowrap overflow-hidden text-ellipsis w-[70px] shrink-0 text-right {cpuClass}">{proc.cpu}</div>
-    <div class="px-2 py-1.5 text-[0.8rem] font-mono whitespace-nowrap overflow-hidden text-ellipsis w-[70px] shrink-0 text-right {memClass}">{proc.mem}</div>
-    <div class="px-2 py-1.5 text-[0.8rem] font-mono whitespace-nowrap overflow-hidden text-ellipsis w-[55px] shrink-0 text-center"><span class="text-[0.7rem] px-1.5 py-[1px] rounded-[3px] font-semibold {statClass}">{proc.stat}</span></div>
-    <div class="px-2 py-1.5 text-[0.8rem] font-mono whitespace-nowrap overflow-hidden text-ellipsis text-[var(--text-muted)] w-[70px] shrink-0">{proc.tty === '?' ? '—' : proc.tty}</div>
-    <div class="px-2 py-1.5 text-[0.8rem] font-mono whitespace-nowrap overflow-hidden text-ellipsis text-[var(--text-muted)] w-[75px] shrink-0">{proc.start}</div>
-    <div class="px-2 py-1.5 text-[0.8rem] font-mono whitespace-nowrap overflow-hidden text-ellipsis text-[var(--text-muted)] w-[80px] shrink-0">{proc.time}</div>
-    <div class="px-2 py-1.5 text-[0.8rem] font-mono whitespace-nowrap overflow-hidden text-ellipsis flex-1 min-w-[250px]" title="{proc.cmdline}">{proc.cmdline}</div>
+    <div class="tree-cell col-pid" style="color: var(--text-muted);">{proc.pid}</div>
+    <div class="tree-cell col-ppid" style="color: var(--text-muted);">{proc.ppid}</div>
+    <div class="tree-cell col-user">{proc.user}</div>
+    <div class="tree-cell col-cpu {cpuClass}">{proc.cpu}</div>
+    <div class="tree-cell col-mem {memClass}">{proc.mem}</div>
+    <div class="tree-cell col-stat"><span class="stat-badge stat-{statChar}">{proc.stat}</span></div>
+    <div class="tree-cell col-tty" style="color: var(--text-muted);">{proc.tty === '?' ? '—' : proc.tty}</div>
+    <div class="tree-cell col-start" style="color: var(--text-muted);">{proc.start}</div>
+    <div class="tree-cell col-time" style="color: var(--text-muted);">{proc.time}</div>
+    <div class="tree-cell col-cmdline" title="{proc.cmdline}">{proc.cmdline}</div>
 </div>
 
 {#if hasChildren && expanded}

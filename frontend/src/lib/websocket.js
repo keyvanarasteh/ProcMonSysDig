@@ -12,7 +12,7 @@ export function connectWebSocket() {
     // If running in browser and not connected
     if (typeof window !== 'undefined' && (!ws || ws.readyState === WebSocket.CLOSED)) {
         // ws://localhost:8091 for local node test, or auto-detect
-        ws = new WebSocket('ws://localhost:8091');
+        ws = new WebSocket('ws://' + window.location.hostname + ':8091');
 
         ws.onopen = () => {
             console.log("WebSocket connection established");

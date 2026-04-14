@@ -1,3 +1,4 @@
+<svelte:options runes={false} />
 <script>
     import { onMount } from 'svelte';
     import { connectWebSocket } from '$lib/websocket.js';
@@ -13,29 +14,24 @@
     import EventDetailModal from '$lib/components/EventDetailModal.svelte';
 
     onMount(() => {
-        // Initialize WebSocket connection once client is ready
         connectWebSocket();
     });
 </script>
 
-<!-- Modals -->
 <InstallModal />
 <LookupModal />
 <EventDetailModal />
 
-<!-- Main App Surface -->
-<div class="flex flex-col h-screen w-screen overflow-hidden bg-[var(--bg-color)] text-[var(--text-main)] font-sans antialiased">
-    <Header />
-    <div class="flex flex-1 overflow-hidden">
-        <Sidebar />
-        <main class="flex-1 p-6 flex flex-col overflow-hidden relative overflow-x-auto min-w-0">
-            <TabBar />
-            
-            {#if $activeTab === 'events'}
-                <EventTable />
-            {:else if $activeTab === 'tree'}
-                <ProcessTree />
-            {/if}
-        </main>
-    </div>
+<Header />
+<div class="layout">
+    <Sidebar />
+    <main class="main-content">
+        <TabBar />
+        
+        {#if $activeTab === 'events'}
+            <EventTable />
+        {:else if $activeTab === 'tree'}
+            <ProcessTree />
+        {/if}
+    </main>
 </div>

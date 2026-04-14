@@ -1,151 +1,115 @@
 <svelte:options runes={false} />
 <script>
     import { eventDetailModalOpen, selectedEvent, treeData } from '../stores.js';
+    import TreeNode from './TreeNode.svelte';
 
-    function closeModal() {
-        eventDetailModalOpen.set(false);
-    }
-    
-    // Subscribe to selectedEvent directly
     $: ev = $selectedEvent || {};
     $: procInfo = $treeData.find(p => p.pid === String(ev.proc_pid));
     $: parentInfo = $treeData.find(p => p.pid === String(ev.proc_ppid));
 
-    // Keyboard support for closing modal
+    // For mock rendering in modal since we don't want to parse full children map again uniquely here
+    // Just a basic visual render of the target node and its parent.
+    function closeModal() {
+        eventDetailModalOpen.set(false);
+    }
+
     function handleKeydown(event) {
-        if (event.key === 'Escape') {
-            closeModal();
-        }
+        if (event.key === 'Escape') closeModal();
     }
 </script>
 
 <svelte:window on:keydown={handleKeydown} />
 
-{#if $eventDetailModalOpen}
-    <!-- svelte-ignore a11y-click-events-have-key-events -->
-    <!-- svelte-ignore a11y-no-static-element-interactions -->
-    <div class="fixed inset-0 bg-[rgba(0,0,0,0.85)] backdrop-blur-md z-[1000] flex items-center justify-center animate-[modalFade_0.3s_ease]" on:click|self={closeModal}>
-        <div class="bg-[var(--bg-color)] border border-[var(--border-color)] rounded-xl w-[90vw] max-w-[1000px] max-h-[90vh] p-8 relative shadow-[0_0_50px_rgba(0,0,0,0.5)] overflow-y-auto">
-            <button class="absolute top-6 right-6 bg-transparent border-none text-[var(--text-muted)] text-2xl cursor-pointer hover:text-[var(--accent-red)] hover:scale-110 transition-transform" on:click={closeModal}>×</button>
-            <h2 class="text-[var(--text-main)] mb-6 flex items-center gap-3 text-xl font-bold">
-                <span class="text-[var(--accent-cyan)]">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
-                </span>
-                Detailed Event Info
-            </h2>
-            
-            <div class="text-[var(--text-main)] text-[0.9rem]">
-                <!-- System Event Data -->
-                <div class="flex gap-5 mb-5">
-                    <div class="flex-1 bg-[rgba(0,255,157,0.05)] border border-[rgba(0,255,157,0.2)] p-5 rounded-lg">
-                        <h4 class="text-[var(--accent-green)] m-0 mb-4 flex items-center gap-2 font-bold text-[1rem]">
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg> 
-                            System Event Data
-                        </h4>
-                        <div class="grid grid-cols-[130px_1fr] gap-3 text-[0.95rem]">
-                            <span class="text-[var(--text-muted)] font-semibold">Syscall:</span> 
-                            <strong class="text-[var(--text-main)] text-[1.1rem] capitalize">{ev.evt_type}</strong>
-                            
-                            <span class="text-[var(--text-muted)] font-semibold">Direction:</span> 
-                            <strong class="font-mono">
-                                {#if ev.evt_dir === '>'}
-                                    <span class="text-[var(--accent-cyan)]">Input (&gt;)</span>
-                                {:else}
-                                    <span class="text-[var(--accent-green)]">Output (&lt;)</span>
-                                {/if}
-                            </strong>
-                            
-                            <span class="text-[var(--text-muted)] font-semibold">Result:</span> 
-                            <strong class="font-mono {String(ev.res).includes('ENOENT') ? 'text-[var(--accent-red)]' : 'text-[var(--accent-green)]'}">{ev.res}</strong>
-                            
-                            <span class="text-[var(--text-muted)] font-semibold">Resource:</span> 
-                            <span class="font-mono break-all text-[var(--accent-cyan)]">{ev.fd_name || '-'}</span>
-                            
-                            <span class="text-[var(--text-muted)] font-semibold">Arguments:</span> 
-                            <div class="font-mono bg-[rgba(0,0,0,0.4)] p-3 rounded-md max-h-[120px] overflow-y-auto border border-[rgba(255,255,255,0.05)]">{ev.evt_args || '-'}</div>
+<div class="modal" id="eventDetailModal" class:active={$eventDetailModalOpen}>
+    <div class="modal-content" style="max-width: 1000px; padding: 32px;">
+        <button class="close-btn" on:click={closeModal}>×</button>
+        <h2 style="margin-bottom: 24px;">🔬 Event In-Depth Execution Analysis</h2>
+
+        {#if Object.keys(ev).length > 0}
+            <div style="display: flex; gap: 30px; flex-wrap: wrap;">
+                
+                <!-- Left Column -->
+                <div style="flex: 1; min-width: 400px; display: flex; flex-direction: column; gap: 20px;">
+                    <!-- Event Details -->
+                    <div style="background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.05); padding: 20px; border-radius: 8px;">
+                        <h3 style="color: var(--accent-cyan); font-size: 0.9rem; margin-top: 0; margin-bottom: 15px; border-bottom: 1px solid rgba(0,240,255,0.1); padding-bottom: 8px; text-transform: uppercase;">1. System Event Triggers</h3>
+                        <div class="detail-row">
+                            <span class="detail-label">Event Type (evt.type)</span>
+                            <span class="detail-value">{ev.evt_type}</span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="detail-label">Direction (evt.dir)</span>
+                            <span class="detail-value">{ev.evt_dir === '>' ? '> (Enter/Call)' : '< (Exit/Return)'}</span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="detail-label">Resource (fd.name)</span>
+                            <span class="detail-value" style="color: var(--text-main);">{ev.fd_name || ev.evt_args || 'N/A'}</span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="detail-label">Return Value (res)</span>
+                            <span class="detail-value" style="color: {String(ev.res).includes('ENOENT') ? 'var(--accent-red)' : ''}">{ev.res || 0}</span>
                         </div>
                     </div>
-                </div>
 
-                <!-- Process & Parent Info -->
-                <div class="flex flex-col md:flex-row gap-5">
                     <!-- Process Info -->
-                    <div class="flex-1 bg-[rgba(0,240,255,0.05)] border border-[rgba(0,240,255,0.2)] p-5 rounded-lg">
-                        <h4 class="text-[var(--accent-cyan)] m-0 mb-4 flex items-center gap-2 font-bold text-[1rem]">
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line></svg> 
-                            Process Info (PID: {ev.proc_pid})
-                        </h4>
-                        <div class="grid grid-cols-[100px_1fr] gap-2.5 text-[0.9rem]">
-                            <span class="text-[var(--text-muted)] font-semibold">Exec Name:</span> 
-                            <strong class="text-[var(--text-main)] text-[1.05rem]">{ev.proc_name}</strong>
-                            
-                            <span class="text-[var(--text-muted)] font-semibold">User:</span> 
-                            <strong>{ev.user_name}</strong>
-
-                            {#if procInfo}
-                                <span class="text-[var(--text-muted)] font-semibold">Status:</span> 
-                                <strong><span class="text-[0.7rem] px-1.5 py-0.5 rounded-[3px] font-semibold bg-[rgba(0,255,157,0.15)] text-[var(--accent-green)]">{procInfo.stat}</span></strong>
-                                
-                                <span class="text-[var(--text-muted)] font-semibold">Usage:</span> 
-                                <strong><span class="text-[var(--accent-cyan)]">CPU:</span> {procInfo.cpu}%  /  <span class="text-[var(--accent-cyan)]">MEM:</span> {procInfo.mem}%</strong>
-                                
-                                <span class="text-[var(--text-muted)] font-semibold">Start Time:</span> 
-                                <strong>{procInfo.start}</strong>
-                                
-                                <span class="text-[var(--text-muted)] font-semibold">Time spent:</span> 
-                                <strong>{procInfo.time}</strong>
-                                
-                                <span class="text-[var(--text-muted)] font-semibold">Cmdline:</span> 
-                                <span class="font-mono bg-[rgba(0,0,0,0.4)] border border-[rgba(255,255,255,0.05)] p-2.5 rounded-md break-all text-xs">{procInfo.cmdline}</span>
-                            {:else}
-                                <span class="col-span-2 text-[var(--accent-orange)] italic text-[0.85rem] mt-2 p-2 bg-[rgba(255,176,58,0.1)] rounded">
-                                    Arka planda süreç metadatası yok (Ölü bir süreç veya henüz tarama bitmedi). Event bilgisiyle yetinildi.
-                                </span>
-                            {/if}
+                    <div style="background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.05); padding: 20px; border-radius: 8px;">
+                        <h3 style="color: var(--accent-cyan); font-size: 0.9rem; margin-top: 0; margin-bottom: 15px; border-bottom: 1px solid rgba(0,240,255,0.1); padding-bottom: 8px; text-transform: uppercase;">2. Active Process Environment</h3>
+                        <div class="detail-row">
+                            <span class="detail-label">Process ID / Name</span>
+                            <span class="detail-value">{ev.proc_pid} - {ev.proc_name}</span>
                         </div>
+                        <div class="detail-row">
+                            <span class="detail-label">Invoking User</span>
+                            <span class="detail-value">{ev.user_name}</span>
+                        </div>
+                        {#if procInfo}
+                            <div class="detail-row">
+                                <span class="detail-label">Command Line (cmdline)</span>
+                                <span class="detail-value mono" style="font-size: 0.8rem; line-height: 1.4; word-break: break-all; color: var(--accent-green);">{procInfo.cmdline}</span>
+                            </div>
+                        {/if}
                     </div>
+                </div>
 
-                    <!-- Parent Info -->
-                    <div class="flex-1 bg-[rgba(255,176,58,0.05)] border border-[rgba(255,176,58,0.2)] p-5 rounded-lg">
-                        <h4 class="text-[var(--accent-orange)] m-0 mb-4 flex items-center gap-2 font-bold text-[1rem]">
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"></path></svg> 
-                            Parent Info (PPID: {ev.proc_ppid})
-                        </h4>
-                        <div class="grid grid-cols-[100px_1fr] gap-2.5 text-[0.9rem]">
+                <!-- Right Column -->
+                <div style="flex: 1; min-width: 400px;">
+                    <div style="background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.05); padding: 20px; border-radius: 8px; height: 100%; box-sizing: border-box;">
+                        <h3 style="color: var(--accent-cyan); font-size: 0.9rem; margin-top: 0; margin-bottom: 15px; border-bottom: 1px solid rgba(0,240,255,0.1); padding-bottom: 8px; text-transform: uppercase;">3. Parent Hierarchy Visualization</h3>
+                        <div class="tree-scroll-area" style="background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.05); padding: 10px; flex: 1; margin: 0; padding-top: 5px;">
+                            
+                            <!-- Static mockup using HTML to mimic tree exactly for these 1-2 nodes -->
                             {#if parentInfo}
-                                <span class="text-[var(--text-muted)] font-semibold">Exec Name:</span> 
-                                <strong class="text-[var(--text-main)] text-[1.05rem]">{parentInfo.comm}</strong>
-                                
-                                <span class="text-[var(--text-muted)] font-semibold">User:</span> 
-                                <strong>{parentInfo.user}</strong>
-                                
-                                <span class="text-[var(--text-muted)] font-semibold">Status:</span> 
-                                <strong><span class="text-[0.7rem] px-1.5 py-0.5 rounded-[3px] font-semibold bg-[rgba(255,176,58,0.15)] text-[var(--accent-orange)]">{parentInfo.stat}</span></strong>
-                                
-                                <span class="text-[var(--text-muted)] font-semibold">Usage:</span> 
-                                <strong><span class="text-[var(--accent-orange)]">CPU:</span> {parentInfo.cpu}%  /  <span class="text-[var(--accent-orange)]">MEM:</span> {parentInfo.mem}%</strong>
-                                
-                                <span class="text-[var(--text-muted)] font-semibold">Start Time:</span> 
-                                <strong>{parentInfo.start}</strong>
-                                
-                                <span class="text-[var(--text-muted)] font-semibold">Cmdline:</span> 
-                                <span class="font-mono bg-[rgba(0,0,0,0.4)] border border-[rgba(255,255,255,0.05)] p-2.5 rounded-md break-all text-xs">{parentInfo.cmdline}</span>
-                            {:else}
-                                <span class="col-span-2 text-[var(--text-muted)] italic">
-                                    Ağaçta parent süreç yakalanamadı ({ev.proc_ppid}).
-                                </span>
+                                <div class="tree-node" style="padding-left:0;">
+                                    <div class="tree-cell col-tree flex" style="display: flex; align-items: center; white-space: nowrap;">
+                                        <span class="tree-toggle leaf">·</span>
+                                        <span class="tree-proc-name">{parentInfo.comm}</span>
+                                    </div>
+                                </div>
                             {/if}
+                            {#if procInfo}
+                                <div class="tree-node" style="padding-left:0; background: rgba(0,240,255,0.05); border: 1px solid rgba(0,240,255,0.2);">
+                                    <div class="tree-cell col-tree flex" style="display: flex; align-items: center; white-space: nowrap;">
+                                        <span class="tree-indent"><span class="tree-indent-unit last-branch" style="position:relative;"></span></span>
+                                        <span class="tree-toggle leaf">·</span>
+                                        <span class="tree-proc-name">{procInfo.comm}</span>
+                                    </div>
+                                </div>
+                            {:else}
+                                <div class="tree-node" style="padding-left:0; background: rgba(0,240,255,0.05); border: 1px solid rgba(0,240,255,0.2);">
+                                    <div class="tree-cell col-tree flex" style="display: flex; align-items: center; white-space: nowrap;">
+                                        <span class="tree-indent"><span class="tree-indent-unit last-branch" style="position:relative;"></span></span>
+                                        <span class="tree-toggle leaf">·</span>
+                                        <span class="tree-proc-name">{ev.proc_name}</span> 
+                                    </div>
+                                    <span style="color:var(--text-muted); font-size:0.75rem; margin-left: 10px;">(Process exited, limited info)</span>
+                                </div>
+                            {/if}
+
                         </div>
                     </div>
                 </div>
-            </div>
-        </div>
-    </div>
-{/if}
 
-<style>
-    @keyframes modalFade {
-        from { opacity: 0; transform: translateY(20px); }
-        to { opacity: 1; transform: translateY(0); }
-    }
-</style>
+            </div>
+        {/if}
+    </div>
+</div>

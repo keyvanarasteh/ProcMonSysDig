@@ -56,17 +56,22 @@ TS_PID=$!
 # Sunucunun bağlanması ve Node'un dinlemeye geçmesi için 5 saniye bekliyoruz
 sleep 5
 
+echo -e "\n${GREEN}[*] Adım 1.5: Svelte Web Sunucusu Başlatılıyor (Port 3000)...${NC}"
+python3 -m http.server 3000 --directory frontend/build &
+WEB_PID=$!
+
 echo -e "${GREEN}[*] Adım 2: Web Arayüzü Tarayıcıda Açılıyor...${NC}"
 if [ -n "$SUDO_USER" ]; then
-    sudo -u $SUDO_USER xdg-open "sysdig.html" &>/dev/null &
+    sudo -u $SUDO_USER xdg-open "http://localhost:3000" &>/dev/null &
 else
-    xdg-open "sysdig.html" &>/dev/null &
+    xdg-open "http://localhost:3000" &>/dev/null &
 fi
 
 echo -e "\n${YELLOW}[+] Sistem Tamamen Devrede! Soket sunucusu logları aşağıdadır:${NC}"
 echo -e "${RED}[!] Kapatmak ve arka plan uygulamasını sonlandırmak için CTRL+C tuşlarına basınız.${NC}\n"
 
 # CTRL+C yakalama işlemi (Script kapatıldığında arkada nodejs sunucusunu temiz şekilde öldürür)
-trap "echo -e '\n\n${RED}[!] Sinyal Alındı! Sunucu güvenli bir şekilde kapatılıyor...${NC}'; kill $TS_PID 2>/dev/null; exit 0" SIGINT SIGTERM
+trap "echo -e '\n\n${RED}[!] Sinyal Alındı! Sunucular güvenli bir şekilde kapatılıyor...${NC}'; kill $TS_PID $WEB_PID 2>/dev/null; exit 0" SIGINT SIGTERM
 
 wait $TS_PID
+wait $WEB_PID
