@@ -1198,6 +1198,11 @@ const sysdig = spawn('sysdig', ['-j']); // JSON çıktısı verir
         function closeLookupModal() { document.getElementById('lookupModal').classList.remove('active'); }
 
         function renderLookupData(lookupType, rawData) {
+            if (lookupType === 'PROCESSES') {
+                renderLookupProcessTree(rawData);
+                return;
+            }
+
             const tableHead = document.getElementById('lookup-thead');
             const tableBody = document.getElementById('lookup-tbody');
             
@@ -1230,11 +1235,118 @@ const sysdig = spawn('sysdig', ['-j']); // JSON çıktısı verir
         }
 
         function filterLookupTable() {
+            if (currentLookupDataKey === 'name' || currentLookupDataKey === 'pid' || document.getElementById('lookup-title').innerText.includes('PROCESS')) {
+                renderLookupProcessTree();
+                return;
+            }
             const term = document.getElementById('lookup-search').value.toLowerCase();
             const trs = document.getElementById('lookup-tbody').getElementsByTagName('tr');
             for(let i=0; i<trs.length; i++) {
                 trs[i].style.display = trs[i].innerText.toLowerCase().includes(term) ? "" : "none";
             }
+        }
+
+        /* === Lookup Process Tree Logic === */
+        let lookupTreeExpanded = {};
+        let lookupTreeData = [];
+
+        function renderLookupProcessTree(rawData = null) {
+            if (rawData) { lookupTreeData = rawData; }
+            const searchTerm = document.getElementById('lookup-search').value.trim().toLowerCase();
+
+            const tableHead = document.getElementById('lookup-thead');
+            const tableBody = document.getElementById('lookup-tbody');
+            
+            tableHead.innerHTML = "<tr><th>PROCESS TREE</th><th width='70'>PID</th><th width='70'>PPID</th><th width='90'>USER</th></tr>";
+
+            let filtered = lookupTreeData;
+            if (searchTerm) {
+                const matchedPids = new Set();
+                filtered.forEach(p => {
+                    if (p.name.toLowerCase().includes(searchTerm) ||
+                        p.pid.includes(searchTerm) ||
+                        p.user.toLowerCase().includes(searchTerm)) {
+                        matchedPids.add(p.pid);
+                        let current = p;
+                        while (current) {
+                            matchedPids.add(current.pid);
+                            current = filtered.find(x => x.pid === current.ppid);
+                            if (current && matchedPids.has(current.pid)) break;
+                        }
+                    }
+                });
+                filtered = lookupTreeData.filter(p => matchedPids.has(p.pid));
+            }
+
+            const childrenMap = {};
+            const pidSet = new Set(filtered.map(p => p.pid));
+
+            filtered.forEach(p => {
+                if (!childrenMap[p.ppid]) childrenMap[p.ppid] = [];
+                childrenMap[p.ppid].push(p);
+            });
+
+            const roots = filtered.filter(p => !pidSet.has(p.ppid) || p.ppid === '0');
+            roots.sort((a, b) => parseInt(a.pid) - parseInt(b.pid));
+
+            let rows = "";
+            
+            function buildHtml(proc, depth, ancestorIsLast, isLast) {
+                const children = childrenMap[proc.pid] || [];
+                children.sort((a, b) => parseInt(a.pid) - parseInt(b.pid));
+                const hasChildren = children.length > 0;
+                
+                if (lookupTreeExpanded[proc.pid] === undefined) {
+                    lookupTreeExpanded[proc.pid] = depth < 1;
+                }
+                const expanded = lookupTreeExpanded[proc.pid] || (searchTerm !== '');
+
+                let indentHtml = '';
+                for (let i = 0; i < depth; i++) {
+                    if (i < depth - 1) {
+                        indentHtml += `<span class="tree-indent-unit ${ancestorIsLast[i] ? '' : 'line'}"></span>`;
+                    } else {
+                        indentHtml += `<span class="tree-indent-unit ${isLast ? 'last-branch' : 'branch'}"></span>`;
+                    }
+                }
+
+                let toggleHtml = '';
+                if (hasChildren) {
+                    toggleHtml = `<span class="tree-toggle" onclick="toggleLookupTree('${proc.pid}', event)">${expanded ? '▼' : '▶'}</span>`;
+                } else {
+                    toggleHtml = `<span class="tree-toggle leaf">·</span>`;
+                }
+                
+                const valToSelect = currentLookupDataKey === 'pid' ? proc.pid : proc.name;
+
+                rows += `<tr onclick="selectLookupRow('${escapeHtml(valToSelect)}')">`;
+                rows += `<td><div class="tree-indent">${indentHtml}</div>${toggleHtml} <span style="font-weight:600">${escapeHtml(proc.name)}</span></td>`;
+                rows += `<td>${proc.pid}</td>`;
+                rows += `<td>${proc.ppid}</td>`;
+                rows += `<td>${escapeHtml(proc.user)}</td>`;
+                rows += `</tr>`;
+
+                if (hasChildren && expanded) {
+                    const newAncestors = [...ancestorIsLast, isLast];
+                    children.forEach((child, idx) => {
+                        buildHtml(child, depth + 1, newAncestors, idx === children.length - 1);
+                    });
+                }
+            }
+
+            roots.forEach((proc, idx) => {
+                buildHtml(proc, 0, [], idx === roots.length - 1);
+            });
+
+            tableBody.innerHTML = rows;
+            document.getElementById('lookup-title').innerHTML = `<span><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg></span> Select PROCESS`;
+            document.getElementById('lookup-count').innerText = `${filtered.length} süreç gösteriliyor.`;
+        }
+
+        function toggleLookupTree(pid, event) {
+            event.stopPropagation();
+            lookupTreeExpanded[pid] = !lookupTreeExpanded[pid];
+            renderLookupProcessTree();
         }
 
         /* === Tab Switching === */

@@ -113,14 +113,18 @@ wss.on('connection', (ws) => {
                 }
             }
             else if (req.command === 'GET_PROCESSES') {
-                exec("ps -eo pid,comm,user --no-headers", (err, stdout) => {
+                exec("ps -eo pid,ppid,user,comm --no-headers", (err, stdout) => {
                     const list = [];
                     if(stdout) {
                         stdout.split('\n').filter(l => l.trim()).forEach(line => {
-                            const [pid, ...rest] = line.trim().split(/\s+/);
-                            const user = rest.pop();
-                            const name = rest.join(' ');
-                            if(pid) list.push({ pid, name, user });
+                            const parts = line.trim().split(/\s+/);
+                            if (parts.length >= 4) {
+                                const pid = parts[0];
+                                const ppid = parts[1];
+                                const user = parts[2];
+                                const name = parts.slice(3).join(' ');
+                                list.push({ pid, ppid, user, name });
+                            }
                         });
                     }
                     ws.send(JSON.stringify({ lookup_type: 'PROCESSES', data: list }));
