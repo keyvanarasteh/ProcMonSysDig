@@ -1,0 +1,5 @@
+node_modules/
+*.scap
+*.deb
+*.log
+.DS_Store

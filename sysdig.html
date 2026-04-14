@@ -1,0 +1,784 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sysdig Inspect X - Web Dashboard</title>
+    <!-- Modern Font -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    
+    <style>
+        /* === Premium CSS Variables === */
+        :root {
+            --bg-color: #050b14;
+            --panel-bg: rgba(13, 20, 36, 0.6);
+            --border-color: rgba(0, 240, 255, 0.15);
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --accent-cyan: #00f0ff;
+            --accent-green: #00ff9d;
+            --accent-red: #ff2a5f;
+            --accent-orange: #ffb03a;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', sans-serif;
+            background: var(--bg-color);
+            background-image: 
+                radial-gradient(circle at 15% 50%, rgba(0, 240, 255, 0.05), transparent 25%),
+                radial-gradient(circle at 85% 30%, rgba(0, 255, 157, 0.05), transparent 25%);
+            color: var(--text-main);
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* === Glassmorphism Components === */
+        .glass {
+            background: var(--panel-bg);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--border-color);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+        }
+
+        .glass-panel {
+            border-radius: 12px;
+            padding: 20px;
+        }
+
+        /* === Typography & Formatting === */
+        h1, h2, h3 { margin: 0; }
+        .mono { font-family: 'JetBrains Mono', monospace; }
+
+        /* === Header === */
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px 32px;
+            border-bottom: 1px solid var(--border-color);
+            background: rgba(5, 11, 20, 0.8);
+            z-index: 10;
+        }
+        
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 1.5rem;
+            font-weight: 800;
+            letter-spacing: 1px;
+            color: var(--text-main);
+        }
+        
+        .logo span { color: var(--accent-cyan); text-shadow: 0 0 10px rgba(0, 240, 255, 0.4); }
+
+        .header-controls {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        /* Connection Status */
+        .status-badge {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            background: rgba(0,0,0,0.5);
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        
+        .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--accent-red); box-shadow: 0 0 8px var(--accent-red); transition: 0.3s; }
+        .dot.connected { background: var(--accent-green); box-shadow: 0 0 8px var(--accent-green); }
+
+        /* === Buttons === */
+        .btn {
+            background: transparent;
+            border: 1px solid var(--accent-cyan);
+            color: var(--accent-cyan);
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            font-family: 'Inter', sans-serif;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn:hover {
+            background: rgba(0, 240, 255, 0.1);
+            box-shadow: 0 0 15px rgba(0, 240, 255, 0.3);
+            transform: translateY(-1px);
+        }
+
+        .btn-green { border-color: var(--accent-green); color: var(--accent-green); }
+        .btn-green:hover { background: rgba(0, 255, 157, 0.1); box-shadow: 0 0 15px rgba(0, 255, 157, 0.3); }
+
+        /* === Main Layout === */
+        .layout {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        /* === Sidebar === */
+        aside {
+            width: 320px;
+            height: 100%;
+            overflow-y: auto;
+            border-right: 1px solid var(--border-color);
+            background: rgba(5, 11, 20, 0.4);
+            padding: 24px;
+            box-sizing: border-box;
+        }
+
+        aside::-webkit-scrollbar { width: 6px; }
+        aside::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 4px; }
+
+        .sidebar-header { margin-bottom: 24px; }
+        .sidebar-header h2 { font-size: 1.1rem; color: var(--text-main); font-weight: 600; display:flex; justify-content: space-between; align-items: center; }
+        
+        /* Filter Categories */
+        .filter-category {
+            margin-bottom: 20px;
+            background: rgba(0,0,0,0.2);
+            border: 1px solid rgba(255,255,255,0.05);
+            border-radius: 8px;
+            padding: 16px;
+        }
+        
+        .filter-category h3 {
+            font-size: 0.85rem;
+            color: var(--accent-cyan);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 12px;
+            border-bottom: 1px solid rgba(0, 240, 255, 0.2);
+            padding-bottom: 6px;
+        }
+
+        /* Input Rows */
+        .input-group {
+            margin-bottom: 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .input-group label { font-size: 0.8rem; color: var(--text-muted); font-weight: 600;}
+        
+        input[type="text"], input[type="number"], select {
+            width: 100%;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255,255,255,0.1);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 4px;
+            outline: none;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+            box-sizing: border-box;
+            transition: all 0.3s ease;
+        }
+
+        input:focus, select:focus {
+            border-color: var(--accent-cyan);
+            box-shadow: 0 0 0 2px rgba(0, 240, 255, 0.15);
+        }
+
+        /* === Tooltip Generator Output === */
+        #generated-filter {
+            background: #000;
+            color: var(--accent-green);
+            padding: 12px;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            margin-top: 20px;
+            word-wrap: break-word;
+            border: 1px solid rgba(0, 255, 157, 0.3);
+            box-shadow: inset 0 0 10px rgba(0, 255, 157, 0.05);
+            min-height: 20px;
+        }
+
+        /* === Main Content Area === */
+        main {
+            flex: 1;
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .controls-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+
+        /* Metrics */
+        .metrics {
+            display: flex;
+            gap: 24px;
+        }
+        
+        .metric {
+            display: flex;
+            flex-direction: column;
+        }
+        .metric .label { font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; }
+        .metric .value { font-size: 1.5rem; font-weight: 800; color: var(--text-main); font-family: 'JetBrains Mono', monospace; }
+
+        /* === Event Table === */
+        .table-wrapper {
+            flex: 1;
+            overflow: auto;
+            border-radius: 8px;
+            background: rgba(0,0,0,0.3);
+            border: 1px solid var(--border-color);
+        }
+        
+        .table-wrapper::-webkit-scrollbar { width: 8px; height: 8px; }
+        .table-wrapper::-webkit-scrollbar-thumb { background: rgba(0, 240, 255, 0.2); border-radius: 4px; }
+        .table-wrapper::-webkit-scrollbar-corner { background: transparent; }
+
+        table { width: 100%; border-collapse: collapse; text-align: left; }
+        
+        th {
+            position: sticky;
+            top: 0;
+            background: rgba(13, 20, 36, 0.95);
+            backdrop-filter: blur(8px);
+            color: var(--text-muted);
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--border-color);
+            z-index: 10;
+        }
+
+        td {
+            padding: 10px 16px;
+            border-bottom: 1px solid rgba(255,255,255,0.03);
+            font-size: 0.85rem;
+            color: var(--text-main);
+        }
+
+        tr:hover td { background: rgba(255,255,255,0.02); }
+
+        /* Color Coding for Table Details */
+        .tag { padding: 2px 6px; border-radius: 4px; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; }
+        .tag.evt-open { background: rgba(0, 240, 255, 0.1); color: var(--accent-cyan); border: 1px solid rgba(0, 240, 255, 0.3); }
+        .tag.evt-read { background: rgba(0, 255, 157, 0.1); color: var(--accent-green); border: 1px solid rgba(0, 255, 157, 0.3); }
+        .tag.evt-write { background: rgba(255, 176, 58, 0.1); color: var(--accent-orange); border: 1px solid rgba(255, 176, 58, 0.3); }
+        .tag.evt-err { background: rgba(255, 42, 95, 0.1); color: var(--accent-red); border: 1px solid rgba(255, 42, 95, 0.3); }
+        
+        .dir-in { color: var(--accent-cyan); font-weight: bold; }
+        .dir-out { color: var(--accent-green); font-weight: bold; }
+
+        @keyframes slideInDown {
+            from { opacity: 0; transform: translateY(-10px); background: rgba(0, 240, 255, 0.2); }
+            to { opacity: 1; transform: translateY(0); background: transparent; }
+        }
+        
+        .new-row {
+            animation: slideInDown 0.5s ease-out forwards;
+        }
+
+        /* === Modal Setup Guide === */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.85);
+            backdrop-filter: blur(8px);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal.active { display: flex; animation: modalFade 0.3s ease; }
+        
+        .modal-content {
+            background: var(--bg-color);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            width: 800px;
+            max-width: 90%;
+            max-height: 85vh;
+            padding: 32px;
+            position: relative;
+            box-shadow: 0 0 50px rgba(0,0,0,0.5);
+            overflow-y: auto;
+        }
+
+        .modal-content h2 { color: var(--text-main); margin-bottom: 24px; display:flex; align-items:center; gap: 12px;}
+        .modal-content h2 span { color: var(--accent-cyan); }
+        .close-btn {
+            position: absolute;
+            top: 24px; right: 24px;
+            background: none; border: none;
+            color: var(--text-muted); font-size: 24px;
+            cursor: pointer; transition: 0.3s;
+        }
+        .close-btn:hover { color: var(--accent-red); transform: scale(1.1); }
+
+        .setup-instruction {
+            margin-bottom: 24px;
+            background: rgba(255,255,255,0.02);
+            padding: 16px;
+            border-radius: 8px;
+            border-left: 3px solid var(--accent-cyan);
+        }
+        
+        .setup-instruction h4 { margin: 0 0 12px 0; color: var(--text-main); }
+        .setup-instruction p { margin: 0 0 12px 0; font-size: 0.9rem; color: var(--text-muted); line-height: 1.5; }
+        
+        pre {
+            background: rgba(0,0,0,0.5);
+            padding: 16px;
+            border-radius: 6px;
+            border: 1px solid rgba(255,255,255,0.1);
+            color: var(--accent-green);
+            overflow-x: auto;
+            font-size: 0.85rem;
+            margin: 0;
+        }
+
+        @keyframes modalFade {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+    </style>
+</head>
+<body>
+
+    <!-- Header -->
+    <header>
+        <div class="logo">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--accent-cyan)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polygon points="12 2 2 7 12 12 22 7 12 2"></polygon>
+                <polyline points="2 17 12 22 22 17"></polyline>
+                <polyline points="2 12 12 17 22 12"></polyline>
+            </svg>
+            System<span>Inspector</span>
+        </div>
+        
+        <div class="header-controls">
+            <button class="btn" onclick="openSetupModal()">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+                Installation & Setup
+            </button>
+            <div class="status-badge" id="conn-status">
+                <span class="dot" id="conn-indicator"></span>
+                Socket: Disconnected
+            </div>
+            <button class="btn btn-green" id="btn-toggle" onclick="toggleCapture()">
+                Start Capture
+            </button>
+        </div>
+    </header>
+
+    <div class="layout">
+        <!-- Sidebar Filters -->
+        <aside>
+            <div class="sidebar-header">
+                <h2>Filters <span>100% Coverage</span></h2>
+            </div>
+
+            <!-- Process Filters -->
+            <div class="filter-category">
+                <h3>Process (proc.*)</h3>
+                <div class="input-group">
+                    <label>Process Name (proc.name)</label>
+                    <input type="text" id="f_proc_name" placeholder="e.g. nginx, sshd" onchange="buildFilterQuery()">
+                </div>
+                <div class="input-group">
+                    <label>Process ID (proc.pid)</label>
+                    <input type="text" id="f_proc_pid" placeholder="e.g. 1234" onchange="buildFilterQuery()">
+                </div>
+                <div class="input-group">
+                    <label>Executable (proc.exe)</label>
+                    <input type="text" id="f_proc_exe" placeholder="/usr/bin/bash" onchange="buildFilterQuery()">
+                </div>
+                <div class="input-group">
+                    <label>Parent Name (proc.pname)</label>
+                    <input type="text" id="f_proc_pname" placeholder="systemd" onchange="buildFilterQuery()">
+                </div>
+            </div>
+
+            <!-- File / Network Filters -->
+            <div class="filter-category">
+                <h3>File & Socket (fd.*)</h3>
+                <div class="input-group">
+                    <label>Descriptor Path (fd.name)</label>
+                    <input type="text" id="f_fd_name" placeholder="/etc/passwd or .log" onchange="buildFilterQuery()">
+                </div>
+                <div class="input-group">
+                    <label>IP Address (fd.ip)</label>
+                    <input type="text" id="f_fd_ip" placeholder="192.168.1.1" onchange="buildFilterQuery()">
+                </div>
+                <div class="input-group">
+                    <label>Port (fd.port)</label>
+                    <input type="number" id="f_fd_port" placeholder="80, 443" onchange="buildFilterQuery()">
+                </div>
+                <div class="input-group">
+                    <label>FD Type (fd.type)</label>
+                    <select id="f_fd_type" onchange="buildFilterQuery()">
+                        <option value="">Any Type</option>
+                        <option value="file">File (file)</option>
+                        <option value="ipv4">Network (IPv4)</option>
+                        <option value="ipv6">Network (IPv6)</option>
+                        <option value="unix">Unix Socket (unix)</option>
+                        <option value="pipe">Pipe (pipe)</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Event Filters -->
+            <div class="filter-category">
+                <h3>Syscall Events (evt.*)</h3>
+                <div class="input-group">
+                    <label>Event Type (evt.type)</label>
+                    <input type="text" id="f_evt_type" placeholder="open, read, connect" onchange="buildFilterQuery()">
+                </div>
+                <div class="input-group">
+                    <label>Direction (evt.dir)</label>
+                    <select id="f_evt_dir" onchange="buildFilterQuery()">
+                        <option value="">Both (< >)</option>
+                        <option value=">">Input Call (>)</option>
+                        <option value="<">Output Reply (<)</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- User Filters -->
+            <div class="filter-category">
+                <h3>User & Group</h3>
+                <div class="input-group">
+                    <label>User Name (user.name)</label>
+                    <input type="text" id="f_user_name" placeholder="root, drvoid" onchange="buildFilterQuery()">
+                </div>
+            </div>
+
+            <h3 style="color:var(--text-muted); font-size:0.8rem; margin-top:20px;">GENERATED SYSIDG FILTER</h3>
+            <div id="generated-filter" class="mono">No active filters. Capturing all data.</div>
+        </aside>
+
+        <!-- Main Workspace -->
+        <main>
+            <div class="controls-bar">
+                <div class="metrics">
+                    <div class="metric">
+                        <span class="label">Captured Events</span>
+                        <span class="value" id="count-events">0</span>
+                    </div>
+                    <div class="metric">
+                        <span class="label">Bytes Scanned</span>
+                        <span class="value" id="count-bytes">0 MB</span>
+                    </div>
+                </div>
+                <div class="actions">
+                    <button class="btn" onclick="clearTable()">Clear View</button>
+                    <button class="btn" style="margin-left:8px;" onclick="toggleDemoMode()">🔌 Trigger Demo Injector</button>
+                </div>
+            </div>
+
+            <div class="table-wrapper">
+                <table id="event-table">
+                    <thead>
+                        <tr>
+                            <th width="80">Time</th>
+                            <th width="50">Dir</th>
+                            <th width="80">Event</th>
+                            <th width="150">Process</th>
+                            <th width="80">PID</th>
+                            <th width="90">User</th>
+                            <th>FD / Resource Path / Arguments</th>
+                            <th width="100">Result</th>
+                        </tr>
+                    </thead>
+                    <tbody id="table-body">
+                        <!-- Rows dynamically inserted here -->
+                    </tbody>
+                </table>
+            </div>
+        </main>
+    </div>
+
+    <!-- INSTALLATION MODAL -->
+    <div class="modal" id="setupModal">
+        <div class="modal-content">
+            <button class="close-btn" onclick="closeSetupModal()">×</button>
+            <h2><span><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:8px"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg></span> System Backend Setup Guide</h2>
+            
+            <p style="color:var(--text-muted); margin-bottom: 24px;">
+                Bu panel tek başına (frontend olarak) çalışmaktadır. Sisteminizi izlemek ve bu paneli bağlamak için arka planda Linux kayıt araçlarını (Procmon / Sysdig) kurmanız gerekmektedir.
+            </p>
+
+            <div class="setup-instruction">
+                <h4>1. Sysdig ve Kernel Başlıklarını Kurma</h4>
+                <p>Eğer sadece `sysdig` komutunu kurarak basit bir socket başlatacaksanız, doğrudan apt depolarını kullanabilirsiniz:</p>
+                <pre>sudo apt-get update
+sudo apt-get install sysdig linux-headers-$(uname -r)</pre>
+            </div>
+
+            <div class="setup-instruction">
+                <h4>2. Microsoft Procmon Kurulumu (Manuel Deb)</h4>
+                <p>Kali Linux / Debian 12 repolarında SHA1 doğrulama sorunu yaşandığı için Procmon ve eBPF kütüphanesi doğrudan Microsoft'tan indirilip kurulmalıdır.</p>
+                <pre># 1. sysinternalsebpf bağımlılığını kur  
+wget -O sysinternalsebpf.deb https://packages.microsoft.com/debian/12/prod/pool/main/s/sysinternalsebpf/sysinternalsebpf_1.5.0_amd64.deb
+sudo dpkg -i sysinternalsebpf.deb
+
+# 2. procmon'u kur
+wget -O procmon.deb https://packages.microsoft.com/debian/12/prod/pool/main/p/procmon/procmon_2.2.0_amd64.deb
+sudo dpkg -i procmon.deb
+sudo dpkg --configure procmon
+rm procmon.deb sysinternalsebpf.deb</pre>
+            </div>
+
+            <div class="setup-instruction">
+                <h4>3. WebSocket Bridge (Örnek Node.js Yaklaşımı)</h4>
+                <p>Sistemi dinleyip bu HTML paneline veri yollamak için bir bridge scriptine ihtiyacınız vardır. Aşağıdaki örnek yapı kullanılabilir:</p>
+                <pre>// backend.js (Kurulum tamamlanınca örnektir)
+const { spawn } = require('child_process');
+const sysdig = spawn('sysdig', ['-j']); // JSON çıktısı verir
+// WebSocket ile bu panele fırlatın...</pre>
+            </div>
+            
+        </div>
+    </div>
+
+    <!-- Application Backend Template Logic -->
+    <script>
+        /* === UI State & Real-time Compilation === */
+        let activeFilterString = "";
+        let isCapturing = false;
+        let eventCount = 0;
+        let bytesCount = 0;
+        let demoInterval = null;
+
+        // Auto-compile Filter String
+        function buildFilterQuery() {
+            const filters = [];
+            
+            // Process
+            const pName = document.getElementById('f_proc_name').value;
+            if(pName) filters.push(`proc.name="${pName}"`);
+            
+            const pPid = document.getElementById('f_proc_pid').value;
+            if(pPid) filters.push(`proc.pid=${pPid}`);
+            
+            const pExe = document.getElementById('f_proc_exe').value;
+            if(pExe) filters.push(`proc.exe="${pExe}"`);
+            
+            const pPname = document.getElementById('f_proc_pname').value;
+            if(pPname) filters.push(`proc.pname="${pPname}"`);
+
+            // FD / Network
+            const fName = document.getElementById('f_fd_name').value;
+            if(fName) filters.push(`fd.name contains "${fName}"`);
+            
+            const fIp = document.getElementById('f_fd_ip').value;
+            if(fIp) filters.push(`fd.ip="${fIp}"`);
+            
+            const fPort = document.getElementById('f_fd_port').value;
+            if(fPort) filters.push(`fd.port=${fPort}`);
+            
+            const fType = document.getElementById('f_fd_type').value;
+            if(fType) filters.push(`fd.type="${fType}"`);
+
+            // Events
+            const eType = document.getElementById('f_evt_type').value;
+            if(eType) filters.push(`evt.type="${eType}"`);
+            
+            const eDir = document.getElementById('f_evt_dir').value;
+            if(eDir) filters.push(`evt.dir="${eDir}"`);
+
+            // Users
+            const uName = document.getElementById('f_user_name').value;
+            if(uName) filters.push(`user.name="${uName}"`);
+
+            // Compile
+            activeFilterString = filters.join(" and ");
+            const display = document.getElementById('generated-filter');
+            
+            if(activeFilterString === "") {
+                display.innerText = "No active filters. Capturing all data.";
+                display.style.color = "var(--text-muted)";
+            } else {
+                display.innerText = activeFilterString;
+                display.style.color = "var(--accent-green)";
+            }
+        }
+
+        // Toggle capture button
+        function toggleCapture() {
+            isCapturing = !isCapturing;
+            const btn = document.getElementById('btn-toggle');
+            
+            if(isCapturing) {
+                btn.classList.remove('btn-green');
+                btn.classList.add('btn-red');
+                btn.style.borderColor = "var(--accent-red)";
+                btn.style.color = "var(--accent-red)";
+                btn.innerHTML = "Stop Capture";
+                
+                // Example of sending payload to socket implementation
+                const payload = { command: "START", filter: activeFilterString };
+                console.log("SENDING TO SOCKET: ", payload);
+                if(window.ws && window.ws.readyState === WebSocket.OPEN) {
+                    window.ws.send(JSON.stringify(payload));
+                }
+
+            } else {
+                btn.classList.remove('btn-red');
+                btn.classList.add('btn-green');
+                btn.style.borderColor = "var(--accent-green)";
+                btn.style.color = "var(--accent-green)";
+                btn.innerHTML = "Start Capture";
+                
+                if(window.ws && window.ws.readyState === WebSocket.OPEN) {
+                    window.ws.send(JSON.stringify({ command: "STOP" }));
+                }
+            }
+        }
+
+        /* === Socket Interfacing & Data Injection === */
+
+        // Auto connect on load
+        function connectSocket() {
+            window.ws = new WebSocket('ws://localhost:8080');
+            
+            window.ws.onopen = () => {
+                console.log("WebSocket connection established");
+                document.getElementById('conn-status').innerHTML = '<span class="dot connected" id="conn-indicator"></span> Socket: Connected';
+            };
+            
+            window.ws.onclose = () => {
+                if(!demoInterval) { // dont override UI if in demo mode
+                   document.getElementById('conn-status').innerHTML = '<span class="dot" id="conn-indicator"></span> Socket: Disconnected';
+                }
+                setTimeout(connectSocket, 3000);
+            };
+
+            window.ws.onmessage = (event) => {
+                try {
+                    const data = JSON.parse(event.data);
+                    handleIncomingEvent(data);
+                } catch(e) {}
+            };
+        }
+
+        // This function should be called by your WebSocket when a message arrives
+        function handleIncomingEvent(eventObj) {
+            if(!isCapturing && eventObj.placeholder !== true) return; // ignore real events if stopped
+            
+            const tbody = document.getElementById('table-body');
+            const row = document.createElement('tr');
+            row.className = "new-row monospaced";
+
+            // Determine tag styling
+            let tagClass = "tag";
+            let typeUpper = String(eventObj.evt_type).toUpperCase();
+            if(typeUpper.includes("OPEN")) tagClass += " evt-open";
+            else if(typeUpper.includes("READ")) tagClass += " evt-read";
+            else if(typeUpper.includes("WRITE")) tagClass += " evt-write";
+            else if(typeUpper.includes("CONNECT")) tagClass += " evt-open";
+            else { tagClass += " evt-err"; typeUpper = eventObj.evt_type; } // default
+
+            // Direction styling
+            let dirStr = String(eventObj.evt_dir);
+            let dirClass = "";
+            if(dirStr === ">") dirClass = "dir-in";
+            if(dirStr === "<") dirClass = "dir-out";
+
+            // Time formatting
+            const date = new Date();
+            const timeStr = `${date.getHours()}:${String(date.getMinutes()).padStart(2,'0')}:${String(date.getSeconds()).padStart(2,'0')}`;
+
+            row.innerHTML = `
+                <td class="mono" style="color:var(--text-muted)">${timeStr}</td>
+                <td class="${dirClass}">${dirStr}</td>
+                <td><span class="${tagClass}">${typeUpper}</span></td>
+                <td class="mono">${eventObj.proc_name}</td>
+                <td class="mono" style="color:var(--text-muted)">${eventObj.proc_pid}</td>
+                <td class="mono">${eventObj.user_name}</td>
+                <td class="mono" style="word-break: break-all;">${eventObj.fd_name || eventObj.evt_args}</td>
+                <td class="mono ${String(eventObj.res).includes('ENOENT') ? 'dir-in' : ''}">${eventObj.res || '0'}</td>
+            `;
+
+            // Prepend new row
+            tbody.insertBefore(row, tbody.firstChild);
+
+            // Keep table lightweight (max 200 rows)
+            if(tbody.children.length > 200) {
+                tbody.removeChild(tbody.lastChild);
+            }
+
+            // Update Metrics
+            eventCount++;
+            bytesCount += Math.random() * 0.1;
+            document.getElementById('count-events').innerText = eventCount.toLocaleString();
+            document.getElementById('count-bytes').innerText = bytesCount.toFixed(2) + " MB";
+        }
+
+        function clearTable() {
+            document.getElementById('table-body').innerHTML = "";
+            eventCount = 0; bytesCount = 0;
+            document.getElementById('count-events').innerText = "0";
+            document.getElementById('count-bytes').innerText = "0 MB";
+        }
+
+        /* === Modal Logic === */
+        function openSetupModal() { document.getElementById('setupModal').classList.add('active'); }
+        function closeSetupModal() { document.getElementById('setupModal').classList.remove('active'); }
+
+        /* === Demo Data Generator === */
+        function toggleDemoMode() {
+            if(demoInterval) {
+                clearInterval(demoInterval);
+                demoInterval = null;
+                document.getElementById('conn-status').innerHTML = '<span class="dot" id="conn-indicator"></span> Socket: Disconnected';
+            } else {
+                document.getElementById('conn-status').innerHTML = '<span class="dot connected" id="conn-indicator"></span> DEMO MOCKED DATA';
+                const dummyProcesses = ["nginx", "nginx", "bash", "sshd", "python", "mysql", "node"];
+                const dummyFiles = ["/var/log/syslog", "/etc/passwd", "127.0.0.1:5432", "/lib/x86_64-linux-gnu/libc.so.6", "/root/.bashrc"];
+                const dummyEvents = ["open", "read", "write", "close", "connect", "stat", "execve"];
+                
+                demoInterval = setInterval(() => {
+                    handleIncomingEvent({
+                        placeholder: true,
+                        evt_type: dummyEvents[Math.floor(Math.random()*dummyEvents.length)],
+                        evt_dir: Math.random() > 0.5 ? ">" : "<",
+                        evt_args: "fd=3(file)",
+                        proc_name: dummyProcesses[Math.floor(Math.random()*dummyProcesses.length)],
+                        proc_pid: Math.floor(Math.random() * 5000) + 1000,
+                        user_name: Math.random() > 0.8 ? "drvoid" : "root",
+                        fd_name: dummyFiles[Math.floor(Math.random()*dummyFiles.length)],
+                        res: Math.random() > 0.8 ? "ENOENT" : "0"
+                    });
+                }, 800);
+            }
+        }
+
+        /* Call build filter on init */
+        buildFilterQuery();
+        connectSocket();
+
+    </script>
+</body>
+</html>
