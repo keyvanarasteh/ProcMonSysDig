@@ -50,7 +50,7 @@ else
 fi
 
 echo -e "\n${GREEN}[*] Adım 1: WebSocket Backend Sunucusu Başlatılıyor...${NC}"
-node sysdig.js &
+node backend.js &
 TS_PID=$!
 
 # Sunucunun bağlanması ve Node'un dinlemeye geçmesi için 5 saniye bekliyoruz
