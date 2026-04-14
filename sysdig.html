@@ -1052,7 +1052,7 @@ const sysdig = spawn('sysdig', ['-j']); // JSON çıktısı verir
 
         // Auto connect on load
         function connectSocket() {
-            window.ws = new WebSocket('ws://localhost:8080');
+            window.ws = new WebSocket('ws://localhost:8091');
             
             window.ws.onopen = () => {
                 console.log("WebSocket connection established");

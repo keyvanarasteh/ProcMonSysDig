@@ -2,15 +2,21 @@ const { WebSocketServer } = require('ws');
 const { spawn, exec } = require('child_process');
 const readline = require('readline');
 
-// Create WebSocket server on port 8080
-const wss = new WebSocketServer({ port: 8080 });
+// Create WebSocket server on port 8091
+const wss = new WebSocketServer({ port: 8091 });
 let sysdigProcess = null;
 
-console.log("🚀 Sysdig WebSocket Server running on ws://localhost:8080");
+console.log("🚀 Sysdig WebSocket Server running on ws://localhost:8091");
 console.log("⚠️ Make sure you are running this script with 'sudo' privileges!");
 
 wss.on('connection', (ws) => {
     console.log('[+] Web UI panel connected.');
+
+    const safeSend = (payload) => {
+        if (ws && ws.readyState === WebSocket.OPEN) {
+            try { ws.send(payload); } catch (err) { console.error('WS Send error:', err); }
+        }
+    };
 
     ws.on('message', (message) => {
         try {
@@ -47,7 +53,7 @@ wss.on('connection', (ws) => {
                                 evt_args: sysdigEvent['evt.args'] || '',
                                 res: sysdigEvent['evt.res'] || '0'
                             };
-                            ws.send(JSON.stringify(payload));
+                            safeSend(JSON.stringify(payload));
                         } catch (e) { }
                     });
                 }
@@ -69,7 +75,7 @@ wss.on('connection', (ws) => {
                     if (!err && stdout) sysdigInfo = stdout.trim().split('\n')[0];
                     exec("dpkg -s procmon | grep Version", (err2, stdout2) => {
                         if (!err2 && stdout2) procmonInfo = "Installed: " + stdout2.trim();
-                        ws.send(JSON.stringify({ 
+                        safeSend(JSON.stringify({ 
                             sys_status: { sysdig: sysdigInfo, procmon: procmonInfo } 
                         }));
                     });
@@ -101,9 +107,9 @@ wss.on('connection', (ws) => {
                 `;
 
                 const installProcess = exec(cmd);
-                installProcess.stdout.on('data', (data) => ws.send(JSON.stringify({ install_log: data.toString() })));
-                installProcess.stderr.on('data', (data) => ws.send(JSON.stringify({ install_log: `[ERR] ${data.toString()}` })));
-                installProcess.on('close', (code) => ws.send(JSON.stringify({ install_log: `\n[--- Installation complete with code ${code} ---]\n` })));
+                installProcess.stdout.on('data', (data) => safeSend(JSON.stringify({ install_log: data.toString() })));
+                installProcess.stderr.on('data', (data) => safeSend(JSON.stringify({ install_log: `[ERR] ${data.toString()}` })));
+                installProcess.on('close', (code) => safeSend(JSON.stringify({ install_log: `\n[--- Installation complete with code ${code} ---]\n` })));
             }
             else if (req.command === 'STOP') {
                 console.log('[*] Stopping capture...');
@@ -127,7 +133,7 @@ wss.on('connection', (ws) => {
                             }
                         });
                     }
-                    ws.send(JSON.stringify({ lookup_type: 'PROCESSES', data: list }));
+                    safeSend(JSON.stringify({ lookup_type: 'PROCESSES', data: list }));
                 });
             }
             else if (req.command === 'GET_PORTS') {
@@ -146,7 +152,7 @@ wss.on('connection', (ws) => {
                     // Filter uniques by port
                     const uniquePorts = Array.from(new Set(list.map(i => i.port)))
                          .map(p => list.find(l => l.port === p));
-                    ws.send(JSON.stringify({ lookup_type: 'PORTS', data: uniquePorts }));
+                    safeSend(JSON.stringify({ lookup_type: 'PORTS', data: uniquePorts }));
                 });
             }
             else if (req.command === 'GET_USERS') {
@@ -158,7 +164,7 @@ wss.on('connection', (ws) => {
                             if(parts.length > 2) list.push({ user: parts[0], uid: parts[2] });
                         });
                     }
-                    ws.send(JSON.stringify({ lookup_type: 'USERS', data: list }));
+                    safeSend(JSON.stringify({ lookup_type: 'USERS', data: list }));
                 });
             }
             // GET_PROCESS_TREE: Tüm süreçleri PID, PPID ve detaylı bilgilerle döndürür
@@ -187,7 +193,7 @@ wss.on('connection', (ws) => {
                             }
                         });
                     }
-                    ws.send(JSON.stringify({ lookup_type: 'PROCESS_TREE', data: list }));
+                    safeSend(JSON.stringify({ lookup_type: 'PROCESS_TREE', data: list }));
                 });
             }
         } catch(e) {

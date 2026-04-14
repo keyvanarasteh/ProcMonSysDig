@@ -1,8 +1,8 @@
 import { WebSocketServer } from 'ws';
 import { spawn } from 'child_process';
 import * as readline from 'readline';
-// Create WebSocket server on port 8080
-const wss = new WebSocketServer({ port: 8080 });
+// Create WebSocket server on port 8091
+const wss = new WebSocketServer({ port: 8091 });
 let sysdigProcess = null;
 console.log("🚀 Sysdig WebSocket Server running on ws://localhost:8080");
 console.log("⚠️ Make sure you are running this script with 'sudo' privileges!");
