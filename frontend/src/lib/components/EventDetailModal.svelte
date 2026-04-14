@@ -24,9 +24,9 @@
 {#if $eventDetailModalOpen}
     <!-- svelte-ignore a11y-click-events-have-key-events -->
     <!-- svelte-ignore a11y-no-static-element-interactions -->
-    <div class="fixed inset-0 bg-[rgba(0,0,0,0.85)] backdrop-blur-md z-[1000] flex items-center justify-center animate-[modalFade_0.3s_ease]" onclick|self={closeModal}>
+    <div class="fixed inset-0 bg-[rgba(0,0,0,0.85)] backdrop-blur-md z-[1000] flex items-center justify-center animate-[modalFade_0.3s_ease]" on:click|self={closeModal}>
         <div class="bg-[var(--bg-color)] border border-[var(--border-color)] rounded-xl w-[90vw] max-w-[1000px] max-h-[90vh] p-8 relative shadow-[0_0_50px_rgba(0,0,0,0.5)] overflow-y-auto">
-            <button class="absolute top-6 right-6 bg-transparent border-none text-[var(--text-muted)] text-2xl cursor-pointer hover:text-[var(--accent-red)] hover:scale-110 transition-transform" onclick={closeModal}>×</button>
+            <button class="absolute top-6 right-6 bg-transparent border-none text-[var(--text-muted)] text-2xl cursor-pointer hover:text-[var(--accent-red)] hover:scale-110 transition-transform" on:click={closeModal}>×</button>
             <h2 class="text-[var(--text-main)] mb-6 flex items-center gap-3 text-xl font-bold">
                 <span class="text-[var(--accent-cyan)]">
                     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>

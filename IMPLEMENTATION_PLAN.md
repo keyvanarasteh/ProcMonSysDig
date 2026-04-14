@@ -37,15 +37,15 @@ SvelteKit uygulaması oluşturulacak. İçerisinde aşağıdaki modüller yer al
    - `sysdig.html` içindeki Cyberpunk/Glassmorphism stili `app.css` içerisine taşınacak ve Svelte scope izolasyonu sayesinde gerekirse komponent seviyesinde bölünecek.
 
 ## Task Checklist
-- [/] **Planlama**: Svelte projesini planla ve `IMPLEMENTATION_PLAN.md`'ye aktar
-- [ ] **SvelteKit Init**: `frontend` dizini altında `npx create-svelte` kullanarak iskeleti oluştur
-- [ ] **Bağımlılıklar**: Proje bağımlılıklarını kur ve global stilleri aktar
-- [ ] **WebSocket Store**: WebSocket alt yapısını `stores.js` içerisine yaz
-- [ ] **Components - Layouts**: Uygulama çerçevesini ve Sidebar filtrelerini oluştur
-- [ ] **Components - Table**: Event table sayfasını taşı
-- [ ] **Components - Tree**: Process tree ekranını component'leştir
-- [ ] **Components - Modals**: Modal pencerelerini Svelte componentlerine çevir
-- [ ] **Entegrasyon Testi**: Uygulamayı ayağa kaldır ve gerçek websocket verileri ile test et
+- [x] **Planlama**: Svelte projesini planla ve `IMPLEMENTATION_PLAN.md`'ye aktar
+- [x] **SvelteKit Init**: `frontend` dizini altında `npx create-svelte` kullanarak iskeleti oluştur
+- [x] **Bağımlılıklar**: Proje bağımlılıklarını kur ve global stilleri aktar
+- [x] **WebSocket Store**: WebSocket alt yapısını `stores.js` içerisine yaz
+- [x] **Components - Layouts**: Uygulama çerçevesini ve Sidebar filtrelerini oluştur
+- [x] **Components - Table**: Event table sayfasını taşı
+- [x] **Components - Tree**: Process tree ekranını component'leştir
+- [x] **Components - Modals**: Modal pencerelerini Svelte componentlerine çevir
+- [x] **Entegrasyon Testi**: Uygulamayı ayağa kaldır ve gerçek websocket verileri ile test et
 
 ## Verification Plan
 

@@ -27,9 +27,9 @@
 {#if $setupModalOpen}
     <!-- svelte-ignore a11y-click-events-have-key-events -->
     <!-- svelte-ignore a11y-no-static-element-interactions -->
-    <div class="fixed inset-0 bg-[rgba(0,0,0,0.85)] backdrop-blur-md z-[1000] flex items-center justify-center animate-[modalFade_0.3s_ease]" onclick|self={close}>
+    <div class="fixed inset-0 bg-[rgba(0,0,0,0.85)] backdrop-blur-md z-[1000] flex items-center justify-center animate-[modalFade_0.3s_ease]" on:click|self={close}>
         <div class="bg-[var(--bg-color)] border border-[var(--border-color)] rounded-xl w-[800px] max-w-[90%] max-h-[85vh] p-8 relative shadow-[0_0_50px_rgba(0,0,0,0.5)] overflow-y-auto">
-            <button class="absolute top-6 right-6 bg-transparent border-none text-[var(--text-muted)] text-2xl cursor-pointer hover:text-[var(--accent-red)] hover:scale-110 transition-transform" onclick={close}>×</button>
+            <button class="absolute top-6 right-6 bg-transparent border-none text-[var(--text-muted)] text-2xl cursor-pointer hover:text-[var(--accent-red)] hover:scale-110 transition-transform" on:click={close}>×</button>
             <h2 class="text-[var(--text-main)] mb-6 flex items-center gap-3 text-xl font-bold">
                 <span class="text-[var(--accent-cyan)]">
                     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
@@ -50,8 +50,8 @@
                     </div>
                 </div>
                 <div class="mt-4 flex gap-3">
-                    <button class="px-4 py-2 border border-[var(--accent-cyan)] text-[var(--accent-cyan)] bg-transparent rounded font-semibold cursor-pointer transition-colors hover:bg-[rgba(0,240,255,0.1)]" onclick={checkStatus}>Check Status</button>
-                    <button class="px-4 py-2 border border-[var(--accent-orange)] text-[var(--accent-orange)] bg-transparent rounded font-semibold cursor-pointer transition-colors hover:bg-[rgba(255,176,58,0.1)]" onclick={runInstall}>Run Installer Script</button>
+                    <button class="px-4 py-2 border border-[var(--accent-cyan)] text-[var(--accent-cyan)] bg-transparent rounded font-semibold cursor-pointer transition-colors hover:bg-[rgba(0,240,255,0.1)]" on:click={checkStatus}>Check Status</button>
+                    <button class="px-4 py-2 border border-[var(--accent-orange)] text-[var(--accent-orange)] bg-transparent rounded font-semibold cursor-pointer transition-colors hover:bg-[rgba(255,176,58,0.1)]" on:click={runInstall}>Run Installer Script</button>
                 </div>
             </div>
 

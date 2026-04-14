@@ -14,7 +14,7 @@
 <div class="flex gap-1 mb-4 bg-[rgba(0,0,0,0.3)] p-1 rounded-lg border border-[rgba(255,255,255,0.05)] w-full">
     <button 
         class="flex-1 py-2.5 px-5 bg-transparent border-none text-[var(--text-muted)] font-semibold text-[0.85rem] cursor-pointer rounded-md transition-all flex items-center justify-center gap-2 hover:text-[var(--text-main)] hover:bg-[rgba(255,255,255,0.03)] {$activeTab === 'events' ? 'bg-[rgba(0,240,255,0.1)] !text-[var(--accent-cyan)] shadow-[0_0_12px_rgba(0,240,255,0.15)] outline outline-1 outline-[rgba(0,240,255,0.25)] hover:!bg-[rgba(0,240,255,0.1)] hover:!text-[var(--accent-cyan)]' : ''}" 
-        onclick={() => setTab('events')}
+        on:click={() => setTab('events')}
     >
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
@@ -25,7 +25,7 @@
     </button>
     <button 
         class="flex-1 py-2.5 px-5 bg-transparent border-none text-[var(--text-muted)] font-semibold text-[0.85rem] cursor-pointer rounded-md transition-all flex items-center justify-center gap-2 hover:text-[var(--text-main)] hover:bg-[rgba(255,255,255,0.03)] {$activeTab === 'tree' ? 'bg-[rgba(0,240,255,0.1)] !text-[var(--accent-cyan)] shadow-[0_0_12px_rgba(0,240,255,0.15)] outline outline-1 outline-[rgba(0,240,255,0.25)] hover:!bg-[rgba(0,240,255,0.1)] hover:!text-[var(--accent-cyan)]' : ''}" 
-        onclick={() => setTab('tree')}
+        on:click={() => setTab('tree')}
     >
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <circle cx="12" cy="5" r="3"></circle>

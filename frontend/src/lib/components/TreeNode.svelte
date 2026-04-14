@@ -73,7 +73,7 @@
         {#if hasChildren}
             <!-- svelte-ignore a11y-click-events-have-key-events -->
             <!-- svelte-ignore a11y-no-static-element-interactions -->
-            <span class="w-[18px] h-[18px] inline-flex items-center justify-center cursor-pointer text-[0.7rem] text-[var(--accent-cyan)] bg-[rgba(0,240,255,0.08)] border border-[rgba(0,240,255,0.2)] rounded mr-1.5 transition-all shrink-0 hover:bg-[rgba(0,240,255,0.2)] hover:scale-110" onclick={toggleNode}>
+            <span class="w-[18px] h-[18px] inline-flex items-center justify-center cursor-pointer text-[0.7rem] text-[var(--accent-cyan)] bg-[rgba(0,240,255,0.08)] border border-[rgba(0,240,255,0.2)] rounded mr-1.5 transition-all shrink-0 hover:bg-[rgba(0,240,255,0.2)] hover:scale-110" on:click={toggleNode}>
                 {expanded ? '▼' : '▶'}
             </span>
         {:else}

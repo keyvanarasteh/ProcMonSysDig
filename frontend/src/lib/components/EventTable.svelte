@@ -36,7 +36,7 @@
             </div>
         </div>
         <div class="flex gap-2">
-            <button class="bg-transparent border border-[var(--accent-cyan)] text-[var(--accent-cyan)] px-4 py-2 rounded-md font-semibold font-sans hover:bg-[rgba(0,240,255,0.1)] transition-all cursor-pointer" onclick={clearTable}>Clear View</button>
+            <button class="bg-transparent border border-[var(--accent-cyan)] text-[var(--accent-cyan)] px-4 py-2 rounded-md font-semibold font-sans hover:bg-[rgba(0,240,255,0.1)] transition-all cursor-pointer" on:click={clearTable}>Clear View</button>
             <button class="bg-transparent border border-[var(--accent-cyan)] text-[var(--accent-cyan)] px-4 py-2 rounded-md font-semibold font-sans hover:bg-[rgba(0,240,255,0.1)] transition-all cursor-pointer hidden md:block">🔌 Trigger Demo</button>
         </div>
     </div>
@@ -58,7 +58,7 @@
             </thead>
             <tbody>
                 {#each $eventsData as ev}
-                    <tr class="hover:bg-[rgba(255,255,255,0.02)] cursor-pointer" onclick={() => openEventDetail(ev)} title="Click to view full event & process details">
+                    <tr class="hover:bg-[rgba(255,255,255,0.02)] cursor-pointer" on:click={() => openEventDetail(ev)} title="Click to view full event & process details">
                         <td class="p-2.5 px-4 border-b border-[rgba(255,255,255,0.03)] text-[0.85rem] font-mono text-[var(--text-muted)]">
                             {new Date().toLocaleTimeString()}
                         </td>

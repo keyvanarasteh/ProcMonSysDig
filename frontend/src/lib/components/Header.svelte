@@ -30,7 +30,7 @@
     </div>
     
     <div class="flex items-center gap-5">
-        <button class="bg-transparent border border-[var(--accent-cyan)] text-[var(--accent-cyan)] px-4 py-2 rounded-md font-semibold font-sans flex items-center gap-2 hover:bg-[rgba(0,240,255,0.1)] hover:shadow-[0_0_15px_rgba(0,240,255,0.3)] transition-all cursor-pointer" onclick={() => setupModalOpen.set(true)}>
+        <button class="bg-transparent border border-[var(--accent-cyan)] text-[var(--accent-cyan)] px-4 py-2 rounded-md font-semibold font-sans flex items-center gap-2 hover:bg-[rgba(0,240,255,0.1)] hover:shadow-[0_0_15px_rgba(0,240,255,0.3)] transition-all cursor-pointer" on:click={() => setupModalOpen.set(true)}>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
             Installation & Setup
         </button>
@@ -43,7 +43,7 @@
         <button class="px-4 py-2 rounded-md font-semibold font-sans flex items-center gap-2 transition-all cursor-pointer border bg-transparent 
             {$isCapturing ? 'border-[var(--accent-red)] text-[var(--accent-red)] hover:bg-[rgba(255,42,95,0.1)] hover:shadow-[0_0_15px_rgba(255,42,95,0.3)]' 
                           : 'border-[var(--accent-green)] text-[var(--accent-green)] hover:bg-[rgba(0,255,157,0.1)] hover:shadow-[0_0_15px_rgba(0,255,157,0.3)]'}" 
-            onclick={toggleCapture}>
+            on:click={toggleCapture}>
             {$isCapturing ? 'Stop Capture' : 'Start Capture'}
         </button>
     </div>
