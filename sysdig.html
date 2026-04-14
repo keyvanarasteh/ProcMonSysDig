@@ -382,6 +382,274 @@
         .btn-lookup:hover { background: var(--accent-cyan); color: #000; }
         .input-group { position: relative; } /* For absolute btn-lookup */
 
+        /* === Tab Bar === */
+        .tab-bar {
+            display: flex;
+            gap: 4px;
+            margin-bottom: 16px;
+            background: rgba(0,0,0,0.3);
+            padding: 4px;
+            border-radius: 8px;
+            border: 1px solid rgba(255,255,255,0.05);
+        }
+        .tab-btn {
+            flex: 1;
+            padding: 10px 20px;
+            background: transparent;
+            border: none;
+            color: var(--text-muted);
+            font-family: 'Inter', sans-serif;
+            font-weight: 600;
+            font-size: 0.85rem;
+            cursor: pointer;
+            border-radius: 6px;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        .tab-btn:hover { color: var(--text-main); background: rgba(255,255,255,0.03); }
+        .tab-btn.active {
+            background: rgba(0, 240, 255, 0.1);
+            color: var(--accent-cyan);
+            box-shadow: 0 0 12px rgba(0, 240, 255, 0.15);
+            border: 1px solid rgba(0, 240, 255, 0.25);
+        }
+
+        /* === Process Tree === */
+        #process-tree-container { display: none; flex: 1; overflow: hidden; flex-direction: column; }
+        #process-tree-container.active-tab { display: flex; }
+        #event-table-container { flex: 1; overflow: hidden; display: flex; flex-direction: column; }
+        #event-table-container.hidden-tab { display: none; }
+
+        .tree-toolbar {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+        .tree-toolbar input {
+            flex: 1;
+            padding: 10px 16px;
+            background: rgba(0,0,0,0.4);
+            border: 1px solid rgba(255,255,255,0.1);
+            color: white;
+            border-radius: 6px;
+            font-family: 'Inter', sans-serif;
+            font-size: 0.85rem;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+        .tree-toolbar input:focus { border-color: var(--accent-cyan); box-shadow: 0 0 0 2px rgba(0, 240, 255, 0.15); }
+
+        .tree-scroll-area {
+            flex: 1;
+            overflow: auto;
+            border-radius: 8px;
+            background: rgba(0,0,0,0.3);
+            border: 1px solid var(--border-color);
+        }
+        .tree-scroll-area::-webkit-scrollbar { width: 8px; height: 8px; }
+        .tree-scroll-area::-webkit-scrollbar-thumb { background: rgba(0, 240, 255, 0.2); border-radius: 4px; }
+
+        .tree-header {
+            display: flex;
+            position: sticky;
+            top: 0;
+            background: rgba(13, 20, 36, 0.95);
+            backdrop-filter: blur(8px);
+            z-index: 10;
+            border-bottom: 1px solid var(--border-color);
+            min-width: 1400px;
+        }
+        .tree-header span {
+            padding: 10px 8px;
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-weight: 600;
+        }
+
+        .tree-node {
+            display: flex;
+            align-items: center;
+            min-height: 32px;
+            border-bottom: 1px solid rgba(255,255,255,0.02);
+            position: relative;
+            transition: background 0.15s;
+            min-width: 1400px;
+        }
+        .tree-node:hover { background: rgba(0, 240, 255, 0.04); }
+
+        .tree-cell {
+            padding: 6px 8px;
+            font-size: 0.8rem;
+            font-family: 'JetBrains Mono', monospace;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            color: var(--text-main);
+        }
+
+        /* Sütun genişlikleri */
+        .col-tree    { width: 280px; flex-shrink: 0; }
+        .col-pid     { width: 70px;  flex-shrink: 0; }
+        .col-ppid    { width: 70px;  flex-shrink: 0; }
+        .col-user    { width: 90px;  flex-shrink: 0; }
+        .col-cpu     { width: 70px;  flex-shrink: 0; text-align: right; }
+        .col-mem     { width: 70px;  flex-shrink: 0; text-align: right; }
+        .col-stat    { width: 55px;  flex-shrink: 0; text-align: center; }
+        .col-tty     { width: 70px;  flex-shrink: 0; }
+        .col-start   { width: 75px;  flex-shrink: 0; }
+        .col-time    { width: 80px;  flex-shrink: 0; }
+        .col-cmdline { flex: 1; min-width: 250px; }
+
+        /* Tree indentation & connectors */
+        .tree-indent {
+            display: inline-flex;
+            align-items: center;
+        }
+        .tree-indent-unit {
+            width: 20px;
+            height: 32px;
+            position: relative;
+            display: inline-block;
+        }
+        .tree-indent-unit.line::before {
+            content: '';
+            position: absolute;
+            left: 9px;
+            top: 0;
+            bottom: 0;
+            width: 1px;
+            background: rgba(0, 240, 255, 0.15);
+        }
+        .tree-indent-unit.branch::before {
+            content: '';
+            position: absolute;
+            left: 9px;
+            top: 0;
+            height: 50%;
+            width: 1px;
+            background: rgba(0, 240, 255, 0.15);
+        }
+        .tree-indent-unit.branch::after {
+            content: '';
+            position: absolute;
+            left: 9px;
+            top: 50%;
+            width: 10px;
+            height: 1px;
+            background: rgba(0, 240, 255, 0.15);
+        }
+        .tree-indent-unit.last-branch::before {
+            content: '';
+            position: absolute;
+            left: 9px;
+            top: 0;
+            height: 50%;
+            width: 1px;
+            background: rgba(0, 240, 255, 0.15);
+        }
+        .tree-indent-unit.last-branch::after {
+            content: '';
+            position: absolute;
+            left: 9px;
+            top: 50%;
+            width: 10px;
+            height: 1px;
+            background: rgba(0, 240, 255, 0.15);
+        }
+
+        .tree-toggle {
+            width: 18px;
+            height: 18px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 0.7rem;
+            color: var(--accent-cyan);
+            background: rgba(0, 240, 255, 0.08);
+            border: 1px solid rgba(0, 240, 255, 0.2);
+            border-radius: 4px;
+            margin-right: 6px;
+            transition: all 0.2s;
+            flex-shrink: 0;
+        }
+        .tree-toggle:hover {
+            background: rgba(0, 240, 255, 0.2);
+            transform: scale(1.1);
+        }
+        .tree-toggle.leaf {
+            background: transparent;
+            border-color: transparent;
+            cursor: default;
+            color: rgba(0, 240, 255, 0.3);
+        }
+
+        .tree-proc-name {
+            font-weight: 600;
+            color: var(--text-main);
+        }
+        .tree-proc-name.root-proc { color: var(--accent-orange); }
+        .tree-proc-name.kernel-proc { color: var(--text-muted); font-style: italic; }
+
+        /* CPU/MEM renk skalası */
+        .usage-low { color: var(--accent-green); }
+        .usage-mid { color: var(--accent-orange); }
+        .usage-high { color: var(--accent-red); }
+
+        .stat-badge {
+            font-size: 0.7rem;
+            padding: 1px 5px;
+            border-radius: 3px;
+            font-weight: 600;
+        }
+        .stat-R { background: rgba(0, 255, 157, 0.15); color: var(--accent-green); }
+        .stat-S { background: rgba(0, 240, 255, 0.1); color: var(--accent-cyan); }
+        .stat-Z { background: rgba(255, 42, 95, 0.15); color: var(--accent-red); }
+        .stat-D { background: rgba(255, 176, 58, 0.15); color: var(--accent-orange); }
+        .stat-T { background: rgba(148, 163, 184, 0.15); color: var(--text-muted); }
+
+        .tree-count-badge {
+            font-size: 0.65rem;
+            background: rgba(0, 240, 255, 0.1);
+            color: var(--accent-cyan);
+            padding: 1px 6px;
+            border-radius: 10px;
+            margin-left: 6px;
+        }
+
+        .tree-loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 60px;
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            gap: 12px;
+        }
+        .tree-loading .spinner {
+            width: 20px; height: 20px;
+            border: 2px solid rgba(0, 240, 255, 0.1);
+            border-top-color: var(--accent-cyan);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .tree-stats {
+            display: flex;
+            gap: 16px;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            padding: 8px 0;
+        }
+        .tree-stats span strong { color: var(--accent-cyan); }
+
     </style>
 </head>
 <body>
@@ -504,41 +772,89 @@
 
         <!-- Main Workspace -->
         <main>
-            <div class="controls-bar">
-                <div class="metrics">
-                    <div class="metric">
-                        <span class="label">Captured Events</span>
-                        <span class="value" id="count-events">0</span>
+            <!-- Tab Bar: Event Table ile Process Tree arası geçiş -->
+            <div class="tab-bar">
+                <button class="tab-btn active" id="tab-events" onclick="switchTab('events')">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="9" y1="21" x2="9" y2="9"></line></svg>
+                    Event Table
+                </button>
+                <button class="tab-btn" id="tab-tree" onclick="switchTab('tree')">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="5" r="3"></circle><line x1="12" y1="8" x2="12" y2="14"></line><line x1="6" y1="18" x2="12" y2="14"></line><line x1="18" y1="18" x2="12" y2="14"></line><circle cx="6" cy="19" r="2"></circle><circle cx="18" cy="19" r="2"></circle></svg>
+                    Process Tree
+                </button>
+            </div>
+
+            <!-- Event Table View -->
+            <div id="event-table-container">
+                <div class="controls-bar">
+                    <div class="metrics">
+                        <div class="metric">
+                            <span class="label">Captured Events</span>
+                            <span class="value" id="count-events">0</span>
+                        </div>
+                        <div class="metric">
+                            <span class="label">Bytes Scanned</span>
+                            <span class="value" id="count-bytes">0 MB</span>
+                        </div>
                     </div>
-                    <div class="metric">
-                        <span class="label">Bytes Scanned</span>
-                        <span class="value" id="count-bytes">0 MB</span>
+                    <div class="actions">
+                        <button class="btn" onclick="clearTable()">Clear View</button>
+                        <button class="btn" style="margin-left:8px;" onclick="toggleDemoMode()">🔌 Trigger Demo Injector</button>
                     </div>
                 </div>
-                <div class="actions">
-                    <button class="btn" onclick="clearTable()">Clear View</button>
-                    <button class="btn" style="margin-left:8px;" onclick="toggleDemoMode()">🔌 Trigger Demo Injector</button>
+
+                <div class="table-wrapper">
+                    <table id="event-table">
+                        <thead>
+                            <tr>
+                                <th width="80">Time</th>
+                                <th width="50">Dir</th>
+                                <th width="80">Event</th>
+                                <th width="150">Process</th>
+                                <th width="80">PID</th>
+                                <th width="90">User</th>
+                                <th>FD / Resource Path / Arguments</th>
+                                <th width="100">Result</th>
+                            </tr>
+                        </thead>
+                        <tbody id="table-body">
+                            <!-- Rows dynamically inserted here -->
+                        </tbody>
+                    </table>
                 </div>
             </div>
 
-            <div class="table-wrapper">
-                <table id="event-table">
-                    <thead>
-                        <tr>
-                            <th width="80">Time</th>
-                            <th width="50">Dir</th>
-                            <th width="80">Event</th>
-                            <th width="150">Process</th>
-                            <th width="80">PID</th>
-                            <th width="90">User</th>
-                            <th>FD / Resource Path / Arguments</th>
-                            <th width="100">Result</th>
-                        </tr>
-                    </thead>
-                    <tbody id="table-body">
-                        <!-- Rows dynamically inserted here -->
-                    </tbody>
-                </table>
+            <!-- Process Tree View -->
+            <div id="process-tree-container">
+                <div class="tree-toolbar">
+                    <input type="text" id="tree-search" placeholder="🔍 Süreç ara... (isim, PID, kullanıcı)" onkeyup="filterTree()">
+                    <button class="btn" onclick="loadProcessTree()">⟳ Yenile</button>
+                    <button class="btn" id="btn-auto-refresh" onclick="toggleTreeAutoRefresh()">▶ Otomatik</button>
+                </div>
+                <div class="tree-stats" id="tree-stats">
+                    <span>Toplam: <strong id="tree-total">—</strong></span>
+                    <span>Running: <strong id="tree-running">—</strong></span>
+                    <span>Sleeping: <strong id="tree-sleeping">—</strong></span>
+                    <span>Zombie: <strong id="tree-zombie">—</strong></span>
+                </div>
+                <div class="tree-scroll-area" id="tree-scroll-area">
+                    <div class="tree-header">
+                        <span class="col-tree">PROCESS (COMMAND)</span>
+                        <span class="col-pid">PID</span>
+                        <span class="col-ppid">PPID</span>
+                        <span class="col-user">USER</span>
+                        <span class="col-cpu">%CPU</span>
+                        <span class="col-mem">%MEM</span>
+                        <span class="col-stat">STAT</span>
+                        <span class="col-tty">TTY</span>
+                        <span class="col-start">START</span>
+                        <span class="col-time">TIME</span>
+                        <span class="col-cmdline">CMDLINE</span>
+                    </div>
+                    <div id="tree-body">
+                        <div class="tree-loading"><div class="spinner"></div> Process Tree yükleniyor...</div>
+                    </div>
+                </div>
             </div>
         </main>
     </div>
@@ -767,7 +1083,11 @@ const sysdig = spawn('sysdig', ['-j']); // JSON çıktısı verir
                         return;
                     }
                     if (data.lookup_type) {
-                        renderLookupData(data.lookup_type, data.data);
+                        if (data.lookup_type === 'PROCESS_TREE') {
+                            handleProcessTreeData(data.data);
+                        } else {
+                            renderLookupData(data.lookup_type, data.data);
+                        }
                         return;
                     }
                     handleIncomingEvent(data);
@@ -915,6 +1235,243 @@ const sysdig = spawn('sysdig', ['-j']); // JSON çıktısı verir
             for(let i=0; i<trs.length; i++) {
                 trs[i].style.display = trs[i].innerText.toLowerCase().includes(term) ? "" : "none";
             }
+        }
+
+        /* === Tab Switching === */
+        function switchTab(tab) {
+            const evtContainer = document.getElementById('event-table-container');
+            const treeContainer = document.getElementById('process-tree-container');
+            const tabEvents = document.getElementById('tab-events');
+            const tabTree = document.getElementById('tab-tree');
+
+            if (tab === 'tree') {
+                evtContainer.classList.add('hidden-tab');
+                treeContainer.classList.add('active-tab');
+                tabEvents.classList.remove('active');
+                tabTree.classList.add('active');
+                loadProcessTree();
+            } else {
+                evtContainer.classList.remove('hidden-tab');
+                treeContainer.classList.remove('active-tab');
+                tabEvents.classList.add('active');
+                tabTree.classList.remove('active');
+            }
+        }
+
+        /* === Process Tree Engine === */
+        let treeData = [];           // Ham süreç listesi
+        let treeExpanded = {};       // { pid: true/false } genişletilmiş durumları
+        let treeAutoRefreshId = null;
+        let treeSearchTerm = '';     // Arama terimi
+
+        /** Backend'den süreç ağacı verisini iste */
+        function loadProcessTree() {
+            if (window.ws && window.ws.readyState === WebSocket.OPEN) {
+                document.getElementById('tree-body').innerHTML = '<div class="tree-loading"><div class="spinner"></div> Süreç ağacı yükleniyor...</div>';
+                window.ws.send(JSON.stringify({ command: 'GET_PROCESS_TREE' }));
+            } else {
+                document.getElementById('tree-body').innerHTML = '<div class="tree-loading">⚠ WebSocket bağlantısı yok. Backend çalışıyor mu?</div>';
+            }
+        }
+
+        /** WebSocket'ten gelen PROCESS_TREE verisini işle */
+        function handleProcessTreeData(data) {
+            treeData = data;
+            // İstatistikleri güncelle
+            document.getElementById('tree-total').innerText = data.length;
+            document.getElementById('tree-running').innerText = data.filter(p => p.stat && p.stat.startsWith('R')).length;
+            document.getElementById('tree-sleeping').innerText = data.filter(p => p.stat && p.stat.startsWith('S')).length;
+            document.getElementById('tree-zombie').innerText = data.filter(p => p.stat && p.stat.startsWith('Z')).length;
+            renderProcessTree();
+        }
+
+        /** Düz listeyi ağaç yapısına dönüştürüp DOM'a yerleştir */
+        function renderProcessTree() {
+            // Arama filtresi uygula
+            let filtered = treeData;
+            if (treeSearchTerm) {
+                const term = treeSearchTerm.toLowerCase();
+                // Eşleşen PID'leri ve onların tüm atalarını bul
+                const matchedPids = new Set();
+                filtered.forEach(p => {
+                    if (p.comm.toLowerCase().includes(term) ||
+                        p.pid.includes(term) ||
+                        p.user.toLowerCase().includes(term) ||
+                        (p.cmdline && p.cmdline.toLowerCase().includes(term))) {
+                        matchedPids.add(p.pid);
+                        // Ataları da ekle
+                        let current = p;
+                        while (current) {
+                            matchedPids.add(current.pid);
+                            current = filtered.find(x => x.pid === current.ppid);
+                            if (current && matchedPids.has(current.pid)) break; // Döngüyü kır
+                        }
+                    }
+                });
+                filtered = treeData.filter(p => matchedPids.has(p.pid));
+            }
+
+            // Parent→children haritası oluştur
+            const childrenMap = {};
+            const pidSet = new Set(filtered.map(p => p.pid));
+
+            filtered.forEach(p => {
+                if (!childrenMap[p.ppid]) childrenMap[p.ppid] = [];
+                childrenMap[p.ppid].push(p);
+            });
+
+            // Kök süreçleri bul: PPID'si filtre dışında olan veya 0 olan
+            const roots = filtered.filter(p => !pidSet.has(p.ppid) || p.ppid === '0');
+
+            // PID'ye göre sırala
+            roots.sort((a, b) => parseInt(a.pid) - parseInt(b.pid));
+
+            const treeBody = document.getElementById('tree-body');
+            treeBody.innerHTML = '';
+
+            if (roots.length === 0) {
+                treeBody.innerHTML = '<div class="tree-loading">Eşleşen süreç bulunamadı.</div>';
+                return;
+            }
+
+            // Ağacı recursive olarak render et
+            const fragment = document.createDocumentFragment();
+            roots.forEach((proc, idx) => {
+                renderTreeNode(proc, 0, [], childrenMap, fragment, idx === roots.length - 1);
+            });
+            treeBody.appendChild(fragment);
+        }
+
+        /**
+         * Tek bir ağaç düğümünü render et (recursive)
+         * @param {Object} proc - Süreç nesnesi
+         * @param {number} depth - Derinlik seviyesi
+         * @param {boolean[]} ancestorIsLast - Atalarının her birinin son çocuk olup olmadığı
+         * @param {Object} childrenMap - PID→children haritası
+         * @param {DocumentFragment} container - Eklenecek container
+         * @param {boolean} isLast - Bu süreç kardeşleri arasında son mu
+         */
+        function renderTreeNode(proc, depth, ancestorIsLast, childrenMap, container, isLast) {
+            const children = childrenMap[proc.pid] || [];
+            children.sort((a, b) => parseInt(a.pid) - parseInt(b.pid));
+            const hasChildren = children.length > 0;
+            const isExpanded = treeExpanded[proc.pid] !== false; // Varsayılan: açık (depth < 2)
+            if (treeExpanded[proc.pid] === undefined) {
+                treeExpanded[proc.pid] = depth < 2;
+            }
+            const expanded = treeExpanded[proc.pid];
+
+            const node = document.createElement('div');
+            node.className = 'tree-node';
+            node.dataset.pid = proc.pid;
+
+            // Indent + connector oluştur
+            let indentHtml = '';
+            for (let i = 0; i < depth; i++) {
+                if (i < depth - 1) {
+                    // Ata seviyelerinde çizgi göster (son değilse)
+                    indentHtml += `<span class="tree-indent-unit ${ancestorIsLast[i] ? '' : 'line'}"></span>`;
+                } else {
+                    // Son seviyede dal çiz
+                    indentHtml += `<span class="tree-indent-unit ${isLast ? 'last-branch' : 'branch'}"></span>`;
+                }
+            }
+
+            // Toggle butonu
+            let toggleHtml;
+            if (hasChildren) {
+                toggleHtml = `<span class="tree-toggle" onclick="toggleTreeNode('${proc.pid}')">${expanded ? '▼' : '▶'}</span>`;
+            } else {
+                toggleHtml = `<span class="tree-toggle leaf">·</span>`;
+            }
+
+            // Süreç adı renklendirme
+            let nameClass = 'tree-proc-name';
+            if (proc.user === 'root' && proc.pid === '1') nameClass += ' root-proc';
+            if (proc.pid === '2' || proc.comm.startsWith('k')) nameClass += ' kernel-proc';
+
+            // Children count badge
+            const childBadge = hasChildren ? `<span class="tree-count-badge">${children.length}</span>` : '';
+
+            // CPU/MEM renk sınıfları
+            const cpuVal = parseFloat(proc.cpu) || 0;
+            const memVal = parseFloat(proc.mem) || 0;
+            const cpuClass = cpuVal >= 50 ? 'usage-high' : (cpuVal >= 10 ? 'usage-mid' : 'usage-low');
+            const memClass = memVal >= 50 ? 'usage-high' : (memVal >= 10 ? 'usage-mid' : 'usage-low');
+
+            // STAT badge sınıfı
+            const statChar = proc.stat ? proc.stat.charAt(0) : '?';
+            const statClass = 'stat-badge stat-' + statChar;
+
+            node.innerHTML = `
+                <div class="tree-cell col-tree">
+                    <div class="tree-indent">${indentHtml}</div>
+                    ${toggleHtml}
+                    <span class="${nameClass}">${escapeHtml(proc.comm)}</span>
+                    ${childBadge}
+                </div>
+                <div class="tree-cell col-pid" style="color:var(--text-muted)">${proc.pid}</div>
+                <div class="tree-cell col-ppid" style="color:var(--text-muted)">${proc.ppid}</div>
+                <div class="tree-cell col-user">${escapeHtml(proc.user)}</div>
+                <div class="tree-cell col-cpu ${cpuClass}">${proc.cpu}</div>
+                <div class="tree-cell col-mem ${memClass}">${proc.mem}</div>
+                <div class="tree-cell col-stat"><span class="${statClass}">${proc.stat}</span></div>
+                <div class="tree-cell col-tty" style="color:var(--text-muted)">${proc.tty === '?' ? '—' : proc.tty}</div>
+                <div class="tree-cell col-start" style="color:var(--text-muted)">${proc.start}</div>
+                <div class="tree-cell col-time" style="color:var(--text-muted)">${proc.time}</div>
+                <div class="tree-cell col-cmdline" title="${escapeHtml(proc.cmdline)}">${escapeHtml(proc.cmdline)}</div>
+            `;
+
+            container.appendChild(node);
+
+            // Çocukları render et (genişletilmişse)
+            if (hasChildren && expanded) {
+                const newAncestors = [...ancestorIsLast, isLast];
+                children.forEach((child, idx) => {
+                    renderTreeNode(child, depth + 1, newAncestors, childrenMap, container, idx === children.length - 1);
+                });
+            }
+        }
+
+        /** Bir düğümü aç/kapa */
+        function toggleTreeNode(pid) {
+            treeExpanded[pid] = !treeExpanded[pid];
+            renderProcessTree();
+        }
+
+        /** Ağaçta arama yap */
+        function filterTree() {
+            treeSearchTerm = document.getElementById('tree-search').value.trim();
+            // Arama sırasında tüm düğümleri aç
+            if (treeSearchTerm) {
+                treeData.forEach(p => { treeExpanded[p.pid] = true; });
+            }
+            renderProcessTree();
+        }
+
+        /** Otomatik yenileme toggle */
+        function toggleTreeAutoRefresh() {
+            const btn = document.getElementById('btn-auto-refresh');
+            if (treeAutoRefreshId) {
+                clearInterval(treeAutoRefreshId);
+                treeAutoRefreshId = null;
+                btn.innerHTML = '▶ Otomatik';
+                btn.style.borderColor = '';
+                btn.style.color = '';
+            } else {
+                treeAutoRefreshId = setInterval(loadProcessTree, 3000);
+                btn.innerHTML = '⏸ Durdur';
+                btn.style.borderColor = 'var(--accent-green)';
+                btn.style.color = 'var(--accent-green)';
+            }
+        }
+
+        /** HTML escape yardımcı fonksiyonu */
+        function escapeHtml(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
         }
 
         /* === Demo Data Generator === */

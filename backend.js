@@ -41,6 +41,7 @@ wss.on('connection', (ws) => {
                                 evt_dir: sysdigEvent['evt.dir'] || 'none',
                                 proc_name: sysdigEvent['proc.name'] || 'system',
                                 proc_pid: sysdigEvent['proc.pid'] || 0,
+                                proc_ppid: sysdigEvent['proc.ppid'] || 0,
                                 user_name: sysdigEvent['user.name'] || 'root',
                                 fd_name: sysdigEvent['fd.name'] || '',
                                 evt_args: sysdigEvent['evt.args'] || '',
@@ -154,6 +155,35 @@ wss.on('connection', (ws) => {
                         });
                     }
                     ws.send(JSON.stringify({ lookup_type: 'USERS', data: list }));
+                });
+            }
+            // GET_PROCESS_TREE: Tüm süreçleri PID, PPID ve detaylı bilgilerle döndürür
+            else if (req.command === 'GET_PROCESS_TREE') {
+                exec("ps -eo pid,ppid,user,%cpu,%mem,stat,tty,start,time,comm,args --no-headers", { maxBuffer: 1024 * 1024 * 5 }, (err, stdout) => {
+                    const list = [];
+                    if (stdout) {
+                        stdout.split('\n').filter(l => l.trim()).forEach(line => {
+                            // ps çıktısını parse et: ilk 10 alan sabit genişlikli, son alan (args) kalan her şey
+                            const trimmed = line.trim();
+                            const parts = trimmed.split(/\s+/);
+                            if (parts.length >= 10) {
+                                const pid   = parts[0];
+                                const ppid  = parts[1];
+                                const user  = parts[2];
+                                const cpu   = parts[3];
+                                const mem   = parts[4];
+                                const stat  = parts[5];
+                                const tty   = parts[6];
+                                const start = parts[7];
+                                const time  = parts[8];
+                                const comm  = parts[9];
+                                // Tam komut satırı: 10. indeksten sonraki tüm parçalar
+                                const cmdline = parts.slice(10).join(' ') || comm;
+                                list.push({ pid, ppid, user, cpu, mem, stat, tty, start, time, comm, cmdline });
+                            }
+                        });
+                    }
+                    ws.send(JSON.stringify({ lookup_type: 'PROCESS_TREE', data: list }));
                 });
             }
         } catch(e) {
