@@ -1,74 +1,56 @@
-# Process Tree (Süreç Ağacı) Feature
+# SvelteKit Migration Feature
 
 ## Amaç
-Dashboard'a **Process Tree** (süreç ağacı) görünümü eklemek. Hangi sürecin hangi sürecin altında çalıştığını hiyerarşik ağaç yapısıyla göstermek. Her süreç satırında erişilebilen tüm veriler (PID, PPID, User, CPU%, MEM%, Command, Executable Path, vb.) sütun olarak gösterilecek.
+Şu anki tek dosyalı `sysdig.html` arayüzünü daha modüler, genişletilebilir ve bakımı kolay olması için modern bir **SvelteKit** uygulamasına dönüştürmek.
+`sysdig.html` içinde bulunan Event Table, Process Tree, WebSocket haberleşmesi, modal pencereleri, vb. tüm yapı taşları SvelteKit komponentleri (`.svelte` dosyaları) ve state yönetim (Svelte stores) yapılarına bölünecek.
 
 ## Proposed Changes
 
-### Backend (`backend.js`)
-#### [MODIFY] [backend.js](file:///home/drvoid/Documents/ProcMonSysDig/backend.js)
+### Frontend (`frontend/`)
+#### [NEW] [frontend/](file:///home/drvoid/Documents/ProcMonSysDig/frontend)
 
-1. **`GET_PROCESS_TREE` komutu ekle** — `ps -eo pid,ppid,user,%cpu,%mem,stat,tty,start,time,comm,args --no-headers` çalıştırarak tüm süreç bilgilerini topla.
-2. Sysdig event payload'a `proc.ppid` alanını ekle (parent PID bilgisi).
+SvelteKit uygulaması oluşturulacak. İçerisinde aşağıdaki modüller yer alacak:
 
----
+1. **State Yönetimi (`src/lib/stores.js`)**: 
+   - WebSocket bağlantı durumu (Svelte store)
+   - `treeData` ve Event verileri
+   - Filtreler ve UI (modal) state yönetimi
 
-### Frontend (`sysdig.html`)
-#### [MODIFY] [sysdig.html](file:///home/drvoid/Documents/ProcMonSysDig/sysdig.html)
+2. **WebSocket Servisi (`src/lib/websocket.js`)**:
+   - `connectSocket`, reconnect mantığı ve backend'den gelen mesajları store'lara aktarma mantığı.
 
-**CSS Eklemeleri:**
-- [/] Tree view container, tree node, expand/collapse toggle, indentation, connector line stilleri
-- [/] Tab bar CSS (Event Table / Process Tree arası geçiş)
+3. **Ana Bileşenler (`src/lib/components/`)**:
+   - `ControlSidebar.svelte` - Filtre girişlerinin yapıldığı yan çubuk.
+   - `TabBar.svelte` - Tree ve Table arası geçiş butonları.
+   - `EventTable.svelte` - Event verilerinin grid formatında gösterildiği tablo bileşeni.
+   - `ProcessTree.svelte` - Backend'den gelen `GET_PROCESS_TREE` verilerinin render edildiği ağaç komponenti.
+   - `InstallModal.svelte` - Sistem statüsünün ve backend kurulum durumunun gösterildiği modal.
+   - `LookupModal.svelte` - Dinamik veri seçme ekranı modalı.
+   - `EventDetailModal.svelte` - Tıklanan bir event'in detaylarını (Process ve PPID) gösteren detay ekranı.
 
-**HTML Eklemeleri:**
-- [/] Ana kontrol alanına **Tab Bar** (Event Table | Process Tree) ekle
-- [/] Process Tree container div (`#process-tree-container`) ekle
-- [/] Tree içinde: arama kutusu + yenile butonu + kolon başlıkları + ağaç gövdesi
+4. **Kök Sayfa (`src/routes/+page.svelte`)**:
+   - Ana yerleşim düzeni (layout). Sidebar ve ana çalışma alanını (EventTable ve ProcessTree) barındıracak.
+   - Açılan modalları yönlendirecek.
+   - `onMount` üzerinde WebSocket servisini başlatacak.
 
-**JavaScript Eklemeleri:**
-- [/] `switchTab(tabName)` — Tab geçişi (Event Table / Process Tree)
-- [/] `loadProcessTree()` — Backend'den `GET_PROCESS_TREE` verisini çek
-- [/] `buildTreeStructure(flatList)` — Düz listeyi parent-child ağaç yapısına dönüştür (PPID → children map)
-- [/] `renderTree(treeNodes, container, depth)` — Recursive rendering: indent + connector çizgileri + expand/collapse toggle
-- [/] `toggleTreeNode(pid)` — Alt süreçleri aç/kapa
-- [/] `filterTree(searchTerm)` — Ağaç üzerinde arama
-- [/] Tree verisini WebSocket `onmessage` handler'a entegre et (`lookup_type === 'PROCESS_TREE'`)
-
-**Gösterilecek Sütunlar:**
-| Sütun | Açıklama |
-|-------|----------|
-| PID | Process ID |
-| PPID | Parent PID |
-| USER | Çalıştıran kullanıcı |
-| %CPU | CPU kullanım yüzdesi |
-| %MEM | Bellek kullanım yüzdesi |
-| STAT | Süreç durumu (R/S/Z/D) |
-| TTY | Terminal |
-| START | Başlangıç zamanı |
-| TIME | CPU zamanı |
-| COMMAND | Kısa komut adı |
-| CMDLINE | Tam komut satırı |
-
----
+5. **Stil Aktarımı (`src/app.css`)**:
+   - `sysdig.html` içindeki Cyberpunk/Glassmorphism stili `app.css` içerisine taşınacak ve Svelte scope izolasyonu sayesinde gerekirse komponent seviyesinde bölünecek.
 
 ## Task Checklist
-
-- [ ] **Backend:** `GET_PROCESS_TREE` komutunu `backend.js`'e ekle
-- [ ] **Backend:** Sysdig event payload'a `proc.ppid` ekle
-- [ ] **Frontend CSS:** Tree view ve tab bar stilleri
-- [ ] **Frontend HTML:** Tab bar + Process Tree container
-- [ ] **Frontend JS:** Tab geçiş, tree build, recursive render, expand/collapse, search
-- [ ] **Test:** Demo mode'da ve gerçek sysdig bağlantıda test et
-
----
+- [/] **Planlama**: Svelte projesini planla ve `IMPLEMENTATION_PLAN.md`'ye aktar
+- [ ] **SvelteKit Init**: `frontend` dizini altında `npx create-svelte` kullanarak iskeleti oluştur
+- [ ] **Bağımlılıklar**: Proje bağımlılıklarını kur ve global stilleri aktar
+- [ ] **WebSocket Store**: WebSocket alt yapısını `stores.js` içerisine yaz
+- [ ] **Components - Layouts**: Uygulama çerçevesini ve Sidebar filtrelerini oluştur
+- [ ] **Components - Table**: Event table sayfasını taşı
+- [ ] **Components - Tree**: Process tree ekranını component'leştir
+- [ ] **Components - Modals**: Modal pencerelerini Svelte componentlerine çevir
+- [ ] **Entegrasyon Testi**: Uygulamayı ayağa kaldır ve gerçek websocket verileri ile test et
 
 ## Verification Plan
 
-### Browser Test
-1. `sudo ./run.sh` ile backend ve frontend'i başlat
-2. Tarayıcıda `http://localhost:3000` (veya ilgili port) açarak dashboard'u görüntüle
-3. **Process Tree** tabına tıkla, ağaç yapısının doğru hiyerarşik göründüğünü doğrula
-4. Bir parent node'u tıklayarak expand/collapse çalıştığını kontrol et
-5. Arama kutusuna bir süreç adı yaz, filtrelemenin çalıştığını doğrula
-6. Tüm 11 sütunun gösterildiğini kontrol et
-7. Event Table tabına geri dön, mevcut işlevselliğin bozulmadığını kontrol et
+### Manuel Onay
+1. Frontend projesi oluşturulduktan sonra backend açıkken `npm run dev` çalıştırılır.
+2. Ekrana `http://localhost:5173` adresi üzerinden gidilir.
+3. Eventlerin ve process tree'nin mevcut versiyon gibi çalıştığı doğrulanır.
+4. "sysdig.html" deki şık tasarım SvelteKit içerisinde aynen korunmuş olmalıdır.
