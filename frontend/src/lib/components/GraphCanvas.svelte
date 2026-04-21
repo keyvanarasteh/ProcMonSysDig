@@ -185,11 +185,12 @@
         
         // Grafikteli süreçleri üzerine yaz (evtCount vb. güncellemek için)
         graphProcs.forEach(p => {
-            if (processMap.has(p.pid)) {
-                const existing = processMap.get(p.pid);
+            const pPidNum = parseInt(p.pid, 10);
+            if (processMap.has(pPidNum)) {
+                const existing = processMap.get(pPidNum);
                 existing.evtCount = p.evtCount;
             } else {
-                processMap.set(p.pid, p);
+                processMap.set(pPidNum, p);
             }
         });
         
@@ -197,6 +198,11 @@
         allProcessesForPicker.sort((a, b) => b.evtCount - a.evtCount || a.name.localeCompare(b.name));
         
         filterProcessList();
+    }
+
+    // Grafa yeni veriler geldiğinde ve seçici açıksa listeyi dinamik olarak güncelle
+    $: if ($graphVersion > 0 && processPickerOpen) {
+        updateFilteredProcesses();
     }
 
     function toggleProcessPicker() {
