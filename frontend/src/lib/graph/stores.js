@@ -73,6 +73,18 @@ export const graphStats = writable({
     processedEvents: 0
 });
 
+/**
+ * Odaklanılan süreç (izolasyon modu)
+ * null = tüm süreçler gösterilir
+ * { pid, name, includeChildren } = sadece bu süreç ve etkileşimleri
+ */
+export const focusedProcess = writable(null);
+
+/**
+ * İzolasyon modu aktif mi
+ */
+export const isIsolationMode = derived(focusedProcess, ($fp) => $fp !== null);
+
 // ─── Transformer API Fonksiyonları ─────────────────────────────
 
 /**
@@ -104,11 +116,19 @@ export function loadGraphFromBackend(graphData) {
 
 /**
  * D3.js için filtrelenmiş graf verisini döndürür
+ * İzolasyon modu aktifse sadece odaklanılan sürece ait veriler döner
  * @returns {Object} { nodes[], links[], stats }
  */
 export function getFilteredGraphData() {
     const config = get(graphConfig);
-    const data = transformer.getGraphData(config.filter || {});
+    const focused = get(focusedProcess);
+    
+    const filterOpts = {
+        ...(config.filter || {}),
+        focusedProcess: focused
+    };
+    
+    const data = transformer.getGraphData(filterOpts);
     
     // İstatistikleri güncelle
     graphStats.set(data.stats);
@@ -148,4 +168,45 @@ export function setPathDepth(depth) {
  */
 export function getTransformer() {
     return transformer;
+}
+
+/**
+ * Belirli bir sürece odaklanır (izolasyon modu)
+ * @param {number} pid - Süreç PID'si
+ * @param {string} name - Süreç adı
+ * @param {boolean} includeChildren - Alt süreçleri de dahil et
+ */
+export function setProcessFocus(pid, name, includeChildren = true) {
+    focusedProcess.set({ pid, name, includeChildren });
+    graphVersion.update(v => v + 1);
+}
+
+/**
+ * İzolasyon modunu kapat (tüm süreçleri göster)
+ */
+export function clearProcessFocus() {
+    focusedProcess.set(null);
+    graphVersion.update(v => v + 1);
+}
+
+/**
+ * Mevcut graf verisindeki tüm benzersiz süreçleri döndürür
+ * Süreç seçici UI'ı için kullanılır
+ * @returns {Object[]} [{ pid, name, evtCount, user }]
+ */
+export function getAvailableProcesses() {
+    const processes = [];
+    for (const [, node] of transformer.nodes) {
+        if (node.type === 'process' && node.metadata?.pid) {
+            processes.push({
+                pid: node.metadata.pid,
+                name: node.label,
+                evtCount: node.evtCount || 0,
+                user: node.metadata.user || '',
+                ppid: node.metadata.ppid || 0
+            });
+        }
+    }
+    // Event sayısına göre sırala (en aktif ilk)
+    return processes.sort((a, b) => b.evtCount - a.evtCount);
 }

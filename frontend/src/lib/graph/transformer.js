@@ -106,7 +106,8 @@ export class GraphTransformer {
 
     /**
      * D3.js force layout için hazır { nodes[], links[] } döndürür
-     * @param {Object} filterConfig - Filtre ayarları (types.js/DEFAULT_GRAPH_CONFIG.filter)
+     * focusedProcess varsa sadece o süreç ve komşuları gösterilir (izolasyon modu)
+     * @param {Object} filterConfig - Filtre ayarları + focusedProcess
      * @returns {Object} { nodes: Object[], links: Object[], stats: Object }
      */
     getGraphData(filterConfig = {}) {
@@ -115,25 +116,39 @@ export class GraphTransformer {
             showFiles = true,
             showNetwork = true,
             minEdgeWeight = 1,
-            noiseThreshold = 0
+            noiseThreshold = 0,
+            focusedProcess = null
         } = filterConfig;
+
+        // ─── İzolasyon Modu: Sadece odaklanan süreç ve komşuları ────
+        let isolatedNodeIds = null; // null = izolasyon yok
+        if (focusedProcess && focusedProcess.pid !== undefined) {
+            isolatedNodeIds = this._buildIsolationSet(focusedProcess);
+        }
 
         // Filtrelenmiş düğümleri topla
         const visibleNodeIds = new Set();
         const filteredNodes = [];
 
         for (const [id, node] of this.nodes) {
+            // İzolasyon filtresi: eğer aktifse, sadece izole edilen düğümler
+            if (isolatedNodeIds && !isolatedNodeIds.has(id)) continue;
+
             // Tür filtreleri
             if (node.type === 'process' && !showProcesses) continue;
             if (node.type === 'file' && !showFiles) continue;
             if (node.type === 'network' && !showNetwork) continue;
-            // Gürültü filtresi
-            if (noiseThreshold > 0 && node.evtCount <= noiseThreshold && node.type !== 'process') continue;
+            // Gürültü filtresi (izolasyon modunda devre dışı)
+            if (!isolatedNodeIds && noiseThreshold > 0 && node.evtCount <= noiseThreshold && node.type !== 'process') continue;
 
             visibleNodeIds.add(id);
             
             // Tema bilgilerini ekle
             const styledNode = this._applyNodeStyle(node);
+            // Odaklanan süreç ise vurgula
+            if (focusedProcess && node.type === 'process' && node.metadata?.pid === focusedProcess.pid) {
+                styledNode._isFocused = true;
+            }
             filteredNodes.push(styledNode);
         }
 
@@ -165,9 +180,94 @@ export class GraphTransformer {
                 totalEdges: this.edges.size,
                 visibleNodes: filteredNodes.length,
                 visibleEdges: filteredEdges.length,
-                processedEvents: this.processedCount
+                processedEvents: this.processedCount,
+                isolationActive: !!isolatedNodeIds,
+                focusedPid: focusedProcess?.pid || null
             }
         };
+    }
+
+    /**
+     * İzolasyon kümesini oluşturur: odaklanan süreç + doğrudan bağlı tüm düğümler
+     * @private
+     * @param {Object} focus - { pid, name, includeChildren }
+     * @returns {Set<string>} İzole edilecek düğüm ID'leri
+     */
+    _buildIsolationSet(focus) {
+        const isolatedIds = new Set();
+        const targetPid = focus.pid;
+
+        // 1. Odaklanan süreci bul (PID veya isim eşleşmesi)
+        const focusedProcIds = [];
+        for (const [id, node] of this.nodes) {
+            if (node.type === 'process' && node.metadata?.pid === targetPid) {
+                focusedProcIds.push(id);
+                isolatedIds.add(id);
+            }
+        }
+
+        // İsim bazlı arama (PID bulunamazsa)
+        if (focusedProcIds.length === 0 && focus.name) {
+            for (const [id, node] of this.nodes) {
+                if (node.type === 'process' && node.label === focus.name) {
+                    focusedProcIds.push(id);
+                    isolatedIds.add(id);
+                }
+            }
+        }
+
+        // 2. Alt süreç ağacı (includeChildren = true)
+        if (focus.includeChildren) {
+            this._collectChildProcesses(targetPid, isolatedIds);
+        }
+
+        // 3. Kenarlar üzerinden doğrudan bağlı düğümleri bul
+        for (const [, edge] of this.edges) {
+            const sourceId = typeof edge.source === 'string' ? edge.source : edge.source?.id;
+            const targetId = typeof edge.target === 'string' ? edge.target : edge.target?.id;
+
+            // Odaklanan süreç kaynak veya hedef ise, karşı tarafı da dahil et
+            if (isolatedIds.has(sourceId)) {
+                isolatedIds.add(targetId);
+            }
+            if (isolatedIds.has(targetId)) {
+                isolatedIds.add(sourceId);
+            }
+        }
+
+        // 4. İkinci geçiş: child process'lerin dosya/ağ bağlantılarını da dahil et
+        const childProcIds = new Set(isolatedIds);
+        for (const [, edge] of this.edges) {
+            const sourceId = typeof edge.source === 'string' ? edge.source : edge.source?.id;
+            const targetId = typeof edge.target === 'string' ? edge.target : edge.target?.id;
+
+            if (childProcIds.has(sourceId)) {
+                isolatedIds.add(targetId);
+            }
+            if (childProcIds.has(targetId)) {
+                isolatedIds.add(sourceId);
+            }
+        }
+
+        return isolatedIds;
+    }
+
+    /**
+     * Belirli bir PID'nin alt süreçlerini rekürsif olarak toplar
+     * @private
+     * @param {number} parentPid - Ebeveyn PID
+     * @param {Set<string>} collected - Toplanan düğüm ID'leri
+     */
+    _collectChildProcesses(parentPid, collected) {
+        for (const [id, node] of this.nodes) {
+            if (node.type === 'process' && node.metadata?.ppid === parentPid && !collected.has(id)) {
+                collected.add(id);
+                // Rekürsif: bu çocuğun çocuklarını da topla
+                if (node.metadata?.pid) {
+                    this._collectChildProcesses(node.metadata.pid, collected);
+                }
+            }
+        }
     }
 
     /**

@@ -7,7 +7,7 @@
      * TabBar'dan "Graph View" sekmesi seçildiğinde görünür.
      */
     import GraphCanvas from './GraphCanvas.svelte';
-    import { selectedNode, selectedEdge, resetGraph, graphStats } from '../graph/stores.js';
+    import { selectedNode, selectedEdge, resetGraph, graphStats, setProcessFocus, clearProcessFocus, focusedProcess } from '../graph/stores.js';
     import { sendWebSocketCommand } from '../websocket.js';
 
     /** Detay çekmecesi açık mı */
@@ -119,6 +119,19 @@
                                 <span class="detail-val">{$selectedNode.style.category}</span>
                             {/if}
                         </div>
+                        <!-- Süreç odaklama butonu -->
+                        {#if $selectedNode.type === 'process' && $selectedNode.metadata?.pid}
+                            <div class="drawer-actions">
+                                <button class="focus-btn" on:click={() => setProcessFocus($selectedNode.metadata.pid, $selectedNode.label, true)}>
+                                    🎯 Bu Sürece Odaklan
+                                </button>
+                                {#if $focusedProcess}
+                                    <button class="focus-btn clear" on:click={() => clearProcessFocus()}>
+                                        ✕ İzolasyonu Kaldır
+                                    </button>
+                                {/if}
+                            </div>
+                        {/if}
                     </div>
                 {:else if $selectedEdge}
                     <!-- KENAR DETAYLARI -->
@@ -309,5 +322,39 @@
         font-size: 0.7rem;
         min-width: 24px;
         text-align: right;
+    }
+
+    .drawer-actions {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        margin-top: 14px;
+        padding-top: 12px;
+        border-top: 1px solid rgba(0,240,255,0.1);
+    }
+    .focus-btn {
+        width: 100%;
+        padding: 8px 12px;
+        background: rgba(255, 42, 95, 0.1);
+        border: 1px solid rgba(255, 42, 95, 0.3);
+        color: #ff2a5f;
+        border-radius: 6px;
+        font-size: 0.8rem;
+        cursor: pointer;
+        font-family: 'Inter', sans-serif;
+        font-weight: 600;
+        transition: all 0.2s;
+    }
+    .focus-btn:hover {
+        background: rgba(255, 42, 95, 0.2);
+        box-shadow: 0 0 12px rgba(255, 42, 95, 0.15);
+    }
+    .focus-btn.clear {
+        background: rgba(0, 240, 255, 0.06);
+        border-color: rgba(0, 240, 255, 0.2);
+        color: #00f0ff;
+    }
+    .focus-btn.clear:hover {
+        background: rgba(0, 240, 255, 0.12);
     }
 </style>

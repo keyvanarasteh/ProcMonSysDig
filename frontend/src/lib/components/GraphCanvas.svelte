@@ -11,7 +11,9 @@
     import { GraphEngine, computeEdgePath, computeArrowPosition } from '../graph/engine.js';
     import { 
         graphVersion, graphConfig, selectedNode, selectedEdge,
-        getFilteredGraphData, graphStats
+        getFilteredGraphData, graphStats,
+        focusedProcess, isIsolationMode,
+        setProcessFocus, clearProcessFocus, getAvailableProcesses
     } from '../graph/stores.js';
     import { NODE_COLORS } from '../graph/theme.js';
 
@@ -35,6 +37,14 @@
     let width = 800;
     /** @type {number} Canvas yüksekliği */
     let height = 600;
+    /** @type {boolean} Süreç seçici açık mı */
+    let processPickerOpen = false;
+    /** @type {string} Süreç arama metni */
+    let processSearch = '';
+    /** @type {Object[]} Filtrelenmiş süreç listesi */
+    let filteredProcesses = [];
+    /** @type {boolean} Alt süreçleri dahil et */
+    let includeChildren = true;
 
     // Reaktif: graphVersion değiştiğinde grafı yeniden yükle
     $: if ($graphVersion > 0 && engine) {
@@ -148,6 +158,46 @@
         if (engine && svgEl) engine.fitToView(svgEl, renderNodes);
     }
 
+    // ─── Süreç İzolasyon Fonksiyonları ────────────────────────────
+
+    function toggleProcessPicker() {
+        processPickerOpen = !processPickerOpen;
+        if (processPickerOpen) {
+            filteredProcesses = getAvailableProcesses();
+            processSearch = '';
+        }
+    }
+
+    function filterProcessList() {
+        const all = getAvailableProcesses();
+        if (!processSearch.trim()) {
+            filteredProcesses = all;
+        } else {
+            const q = processSearch.toLowerCase();
+            filteredProcesses = all.filter(p => 
+                p.name.toLowerCase().includes(q) ||
+                String(p.pid).includes(q) ||
+                (p.user && p.user.toLowerCase().includes(q))
+            );
+        }
+    }
+
+    function selectProcessForFocus(proc) {
+        setProcessFocus(proc.pid, proc.name, includeChildren);
+        processPickerOpen = false;
+        processSearch = '';
+    }
+
+    function handleClearIsolation() {
+        clearProcessFocus();
+    }
+
+    function focusOnClickedNode(node) {
+        if (node.type === 'process' && node.metadata?.pid) {
+            setProcessFocus(node.metadata.pid, node.label, includeChildren);
+        }
+    }
+
     // ─── Render Yardımcıları ─────────────────────────────────────
 
     function getNodeRadius(node) {
@@ -192,10 +242,52 @@
             <span>Event: <strong>{$graphStats.processedEvents}</strong></span>
         </div>
         <div class="graph-actions">
+            <!-- Süreç Seçici -->
+            <div class="process-picker-wrap">
+                <button class="graph-btn" class:active={processPickerOpen || $isIsolationMode}
+                        on:click={toggleProcessPicker} title="Süreç bazlı görselleştir">
+                    🔍 Süreç Seç
+                </button>
+                {#if processPickerOpen}
+                    <div class="process-picker">
+                        <input type="text" class="process-search"
+                               placeholder="PID, isim veya kullanıcı ara..."
+                               bind:value={processSearch}
+                               on:input={filterProcessList} />
+                        <label class="child-toggle">
+                            <input type="checkbox" bind:checked={includeChildren} />
+                            Alt süreçleri dahil et
+                        </label>
+                        <div class="process-list">
+                            {#each filteredProcesses as proc}
+                                <button class="process-item" on:click={() => selectProcessForFocus(proc)}>
+                                    <span class="proc-name">{proc.name}</span>
+                                    <span class="proc-pid">PID:{proc.pid}</span>
+                                    <span class="proc-user">{proc.user}</span>
+                                    <span class="proc-count">{proc.evtCount} evt</span>
+                                </button>
+                            {:else}
+                                <div class="process-empty">Süreç bulunamadı</div>
+                            {/each}
+                        </div>
+                    </div>
+                {/if}
+            </div>
             <button class="graph-btn" on:click={handleFitView} title="Grafı sığdır">⊞ Sığdır</button>
             <button class="graph-btn" on:click={() => { if(engine && svgEl) d3.select(svgEl).transition().duration(500).call(engine.zoomBehavior.transform, d3.zoomIdentity); }} title="Zoom sıfırla">↺ Sıfırla</button>
         </div>
     </div>
+
+    <!-- İzolasyon Modu Göstergesi -->
+    {#if $isIsolationMode}
+        <div class="isolation-banner">
+            <span>🎯 <strong>{$focusedProcess.name}</strong> (PID: {$focusedProcess.pid}) odaklı görünüm</span>
+            {#if $focusedProcess.includeChildren}
+                <span class="isolation-tag">+ alt süreçler</span>
+            {/if}
+            <button class="isolation-clear" on:click={handleClearIsolation}>✕ Tümünü Göster</button>
+        </div>
+    {/if}
 
     <!-- SVG Canvas -->
     <svg bind:this={svgEl} {width} {height} class="graph-svg">
@@ -297,6 +389,13 @@
                             <circle cx={getNodeRadius(node) - 4} cy={-getNodeRadius(node) + 4}
                                     r="4" fill="#ff2a5f" stroke="none" />
                         {/if}
+
+                        <!-- Odaklanma göstergesi -->
+                        {#if node._isFocused}
+                            <circle r={getNodeRadius(node) + 10} fill="none"
+                                    stroke="#ff2a5f" stroke-opacity="0.5"
+                                    stroke-width="3" stroke-dasharray="6,3" />
+                        {/if}
                     </g>
                 {/if}
             {/each}
@@ -330,6 +429,9 @@
                 <div class="tooltip-detail">User: {hoveredNode.metadata.user}</div>
             {/if}
             <div class="tooltip-detail">Events: {hoveredNode.evtCount}</div>
+            {#if hoveredNode.type === 'process'}
+                <div class="tooltip-action">Tıkla: detay | Sağ tık: odaklan</div>
+            {/if}
         </div>
     {/if}
 </div>
@@ -465,5 +567,167 @@
         font-size: 0.75rem;
         color: rgba(148,163,184,0.8);
         line-height: 1.5;
+    }
+    .tooltip-action {
+        font-size: 0.65rem;
+        color: rgba(0, 240, 255, 0.5);
+        margin-top: 6px;
+        border-top: 1px solid rgba(0,240,255,0.1);
+        padding-top: 4px;
+    }
+
+    /* ─── Süreç Seçici ─────────────────────────────────────────── */
+    .process-picker-wrap {
+        position: relative;
+    }
+    .graph-btn.active {
+        background: rgba(255, 42, 95, 0.15);
+        border-color: rgba(255, 42, 95, 0.4);
+        color: #ff2a5f;
+    }
+    .process-picker {
+        position: absolute;
+        top: 100%;
+        right: 0;
+        margin-top: 6px;
+        width: 320px;
+        max-height: 400px;
+        background: rgba(5, 11, 20, 0.98);
+        border: 1px solid rgba(0, 240, 255, 0.2);
+        border-radius: 10px;
+        padding: 10px;
+        z-index: 200;
+        backdrop-filter: blur(16px);
+        box-shadow: 0 12px 40px rgba(0,0,0,0.6);
+        animation: fadeIn 0.15s ease;
+    }
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(-6px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    .process-search {
+        width: 100%;
+        padding: 8px 10px;
+        background: rgba(255,255,255,0.04);
+        border: 1px solid rgba(0,240,255,0.15);
+        border-radius: 6px;
+        color: #f8fafc;
+        font-size: 0.8rem;
+        font-family: 'JetBrains Mono', monospace;
+        outline: none;
+        box-sizing: border-box;
+    }
+    .process-search::placeholder {
+        color: rgba(148,163,184,0.5);
+    }
+    .process-search:focus {
+        border-color: rgba(0,240,255,0.4);
+        box-shadow: 0 0 8px rgba(0,240,255,0.15);
+    }
+    .child-toggle {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 0.72rem;
+        color: rgba(148,163,184,0.7);
+        padding: 6px 0;
+        cursor: pointer;
+    }
+    .child-toggle input[type="checkbox"] {
+        accent-color: #00f0ff;
+    }
+    .process-list {
+        max-height: 280px;
+        overflow-y: auto;
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+    }
+    .process-item {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        width: 100%;
+        padding: 7px 8px;
+        background: transparent;
+        border: none;
+        border-radius: 6px;
+        color: #f8fafc;
+        cursor: pointer;
+        font-family: 'Inter', sans-serif;
+        font-size: 0.78rem;
+        text-align: left;
+        transition: background 0.15s;
+    }
+    .process-item:hover {
+        background: rgba(0, 240, 255, 0.08);
+    }
+    .proc-name {
+        flex: 1;
+        font-weight: 600;
+        color: #00f0ff;
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 0.76rem;
+    }
+    .proc-pid {
+        font-size: 0.7rem;
+        color: rgba(148,163,184,0.7);
+        font-family: 'JetBrains Mono', monospace;
+    }
+    .proc-user {
+        font-size: 0.7rem;
+        color: rgba(148,163,184,0.5);
+    }
+    .proc-count {
+        font-size: 0.68rem;
+        color: rgba(0,255,157,0.7);
+        font-family: 'JetBrains Mono', monospace;
+    }
+    .process-empty {
+        padding: 16px;
+        text-align: center;
+        color: rgba(148,163,184,0.5);
+        font-size: 0.8rem;
+    }
+
+    /* ─── İzolasyon Modu Göstergesi ─────────────────────────────── */
+    .isolation-banner {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 6px 14px;
+        background: linear-gradient(90deg, rgba(255,42,95,0.12), rgba(0,240,255,0.06));
+        border-bottom: 1px solid rgba(255, 42, 95, 0.2);
+        font-size: 0.78rem;
+        color: #f8fafc;
+        animation: fadeIn 0.2s ease;
+    }
+    .isolation-banner strong {
+        color: #ff2a5f;
+        font-family: 'JetBrains Mono', monospace;
+    }
+    .isolation-tag {
+        background: rgba(0, 240, 255, 0.1);
+        border: 1px solid rgba(0, 240, 255, 0.2);
+        padding: 1px 8px;
+        border-radius: 10px;
+        font-size: 0.68rem;
+        color: #00f0ff;
+    }
+    .isolation-clear {
+        margin-left: auto;
+        background: rgba(255, 42, 95, 0.1);
+        border: 1px solid rgba(255, 42, 95, 0.3);
+        color: #ff2a5f;
+        padding: 3px 10px;
+        border-radius: 4px;
+        font-size: 0.72rem;
+        cursor: pointer;
+        font-family: 'Inter', sans-serif;
+        transition: all 0.2s;
+    }
+    .isolation-clear:hover {
+        background: rgba(255, 42, 95, 0.2);
+        box-shadow: 0 0 12px rgba(255, 42, 95, 0.2);
     }
 </style>
