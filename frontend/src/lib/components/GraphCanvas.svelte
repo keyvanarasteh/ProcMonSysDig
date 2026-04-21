@@ -15,6 +15,7 @@
         focusedProcess, isIsolationMode,
         setProcessFocus, clearProcessFocus, getAvailableProcesses
     } from '../graph/stores.js';
+    import { treeData } from '../stores.js';
     import { NODE_COLORS } from '../graph/theme.js';
 
     /** @type {SVGElement} SVG DOM referansı */
@@ -160,21 +161,58 @@
 
     // ─── Süreç İzolasyon Fonksiyonları ────────────────────────────
 
+    let allProcessesForPicker = [];
+
+    function updateFilteredProcesses() {
+        const graphProcs = getAvailableProcesses();
+        const systemProcs = $treeData || [];
+        
+        const processMap = new Map();
+        
+        // Önce çalışan sistem süreçlerini ekle
+        systemProcs.forEach(p => {
+            const pidNum = parseInt(p.pid, 10);
+            if (!isNaN(pidNum)) {
+                processMap.set(pidNum, {
+                    pid: pidNum,
+                    name: p.comm,
+                    user: p.user,
+                    evtCount: 0,
+                    ppid: parseInt(p.ppid, 10) || 0
+                });
+            }
+        });
+        
+        // Grafikteli süreçleri üzerine yaz (evtCount vb. güncellemek için)
+        graphProcs.forEach(p => {
+            if (processMap.has(p.pid)) {
+                const existing = processMap.get(p.pid);
+                existing.evtCount = p.evtCount;
+            } else {
+                processMap.set(p.pid, p);
+            }
+        });
+        
+        allProcessesForPicker = Array.from(processMap.values());
+        allProcessesForPicker.sort((a, b) => b.evtCount - a.evtCount || a.name.localeCompare(b.name));
+        
+        filterProcessList();
+    }
+
     function toggleProcessPicker() {
         processPickerOpen = !processPickerOpen;
         if (processPickerOpen) {
-            filteredProcesses = getAvailableProcesses();
             processSearch = '';
+            updateFilteredProcesses();
         }
     }
 
     function filterProcessList() {
-        const all = getAvailableProcesses();
         if (!processSearch.trim()) {
-            filteredProcesses = all;
+            filteredProcesses = allProcessesForPicker;
         } else {
             const q = processSearch.toLowerCase();
-            filteredProcesses = all.filter(p => 
+            filteredProcesses = allProcessesForPicker.filter(p => 
                 p.name.toLowerCase().includes(q) ||
                 String(p.pid).includes(q) ||
                 (p.user && p.user.toLowerCase().includes(q))

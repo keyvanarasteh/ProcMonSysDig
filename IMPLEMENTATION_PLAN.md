@@ -46,6 +46,8 @@ SvelteKit uygulaması oluşturulacak. İçerisinde aşağıdaki modüller yer al
 - [x] **Components - Tree**: Process tree ekranını component'leştir
 - [x] **Components - Modals**: Modal pencerelerini Svelte componentlerine çevir
 - [x] **Entegrasyon Testi**: Uygulamayı ayağa kaldır ve gerçek websocket verileri ile test et
+- [ ] **GraphView Süreç Seçimi**: `treeData` ve `GraphTransformer` verilerini birleştirip SvelteKit GraphCanvas süreç seçici komponentini tamamen doldur.
+- [ ] **Bugfix & Checkup**: `GraphCanvas.svelte`'deki boş listeyi giderme ve ProcDot tarzı süreç izolasyon modunu deneme.
 
 ## Verification Plan
 
