@@ -4,6 +4,7 @@ import {
     treeData, lookupData, eventsData, eventCount, bytesCount,
     isCapturing, demoMode
 } from './stores';
+import { pushGraphEvent, pushGraphEvents, loadGraphFromBackend } from './graph/stores.js';
 
 let ws = null;
 let treeAutoRefreshInterval = null;
@@ -62,6 +63,18 @@ export function connectWebSocket() {
                     return;
                 }
 
+                // Graf verisi: GET_GRAPH_DATA komutu yanıtı
+                if (data.graph_type === 'GRAPH_DATA') {
+                    loadGraphFromBackend(data.data);
+                    return;
+                }
+
+                // Event snapshot: GET_EVENT_SNAPSHOT komutu yanıtı
+                if (data.snapshot_type === 'EVENT_SNAPSHOT') {
+                    pushGraphEvents(data.data || []);
+                    return;
+                }
+
                 // If not tracking AND it's not a demo placeholder, ignore
                 if (!get(isCapturing) && data.placeholder !== true) return;
 
@@ -76,6 +89,9 @@ export function connectWebSocket() {
                 
                 eventCount.update(n => n + 1);
                 bytesCount.update(n => n + Math.random() * 0.1);
+
+                // Graf görselleştirme: her event'i graf transformer'a besle
+                pushGraphEvent(data);
 
             } catch (e) {
                 console.error("WebSocket payload error:", e);
