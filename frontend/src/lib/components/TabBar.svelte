@@ -8,6 +8,9 @@
         if (tabName === 'tree') {
             sendWebSocketCommand({ command: 'GET_PROCESS_TREE' });
         }
+        if (tabName === 'graph') {
+            sendWebSocketCommand({ command: 'GET_GRAPH_DATA' });
+        }
     }
 </script>
 
@@ -30,5 +33,16 @@
             <circle cx="18" cy="19" r="2"></circle>
         </svg>
         Process Tree
+    </button>
+    <button class="tab-btn {$activeTab === 'graph' ? 'active' : ''}" on:click={() => setTab('graph')}>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="6" cy="6" r="3"></circle>
+            <circle cx="18" cy="6" r="3"></circle>
+            <circle cx="12" cy="18" r="3"></circle>
+            <line x1="8.5" y1="7.5" x2="10.5" y2="16"></line>
+            <line x1="15.5" y1="7.5" x2="13.5" y2="16"></line>
+            <line x1="9" y1="6" x2="15" y2="6"></line>
+        </svg>
+        Graph View
     </button>
 </div>

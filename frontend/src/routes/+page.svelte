@@ -9,6 +9,7 @@
     import TabBar from '$lib/components/TabBar.svelte';
     import EventTable from '$lib/components/EventTable.svelte';
     import ProcessTree from '$lib/components/ProcessTree.svelte';
+    import GraphView from '$lib/components/GraphView.svelte';
     import InstallModal from '$lib/components/InstallModal.svelte';
     import LookupModal from '$lib/components/LookupModal.svelte';
     import EventDetailModal from '$lib/components/EventDetailModal.svelte';
@@ -32,6 +33,8 @@
             <EventTable />
         {:else if $activeTab === 'tree'}
             <ProcessTree />
+        {:else if $activeTab === 'graph'}
+            <GraphView />
         {/if}
     </main>
 </div>
